@@ -1,12 +1,14 @@
-package persistentLayer;
+package persistentdao;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-import CustomExceptions.CustomException;
+import customexceptions.CustomException;
 
 public class DBConnection {
+	private DBConnection() {
+	}
 
 	private static class ConnectionHelper {
 		private static Connection connection;
@@ -14,7 +16,7 @@ public class DBConnection {
 		static Connection getConnection() throws CustomException {
 			try {
 				if (connection == null) {
-					connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/bank");
+					connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/bank", "root", "root");
 				}
 				return connection;
 			} catch (SQLException e) {
@@ -27,11 +29,10 @@ public class DBConnection {
 		return ConnectionHelper.getConnection();
 	}
 
-	public static void close() throws CustomException {
+	public static void closeConnection() throws CustomException {
 		try {
-			Connection connection = ConnectionHelper.getConnection();
-			if (connection == null) {
-				connection.close();
+			if (ConnectionHelper.connection != null) {
+				ConnectionHelper.connection.close();
 			}
 		} catch (SQLException e) {
 			throw new CustomException("Failed to close Connection.", e);

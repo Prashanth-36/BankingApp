@@ -1,10 +1,12 @@
-package logicalLayer;
+package logicallayer;
 
-import CustomExceptions.CustomException;
-import CustomExceptions.InvalidOperationException;
+import java.util.List;
+
+import customexceptions.CustomException;
+import customexceptions.InvalidOperationException;
 import model.Customer;
-import persistentLayer.CustomerDao;
-import persistentLayer.CustomerManager;
+import persistentdao.CustomerDao;
+import persistentlayer.CustomerManager;
 
 public class EmployeeHandler {
 
@@ -20,6 +22,14 @@ public class EmployeeHandler {
 
 	public void removeCustomer(int customerId) throws CustomException {
 		customerManager.removeCustomer(customerId);
+	}
+
+	public Customer getCustomer(int customerId) throws CustomException {
+		return customerManager.getCustomer(customerId);
+	}
+
+	public List<Customer> getCustomers(int branchId) throws CustomException {
+		return customerManager.getCustomers(branchId);
 	}
 
 }

@@ -1,6 +1,8 @@
-package persistentLayer;
+package persistentlayer;
 
-import CustomExceptions.CustomException;
+import java.util.List;
+
+import customexceptions.CustomException;
 import model.Customer;
 
 public interface CustomerManager {
@@ -9,8 +11,10 @@ public interface CustomerManager {
 
 	void removeCustomer(int customerId) throws CustomException;
 
-	Customer getCustomer(int id);
+	Customer getCustomer(int id) throws CustomException;
 
 	int getCustomerId(String panNo) throws CustomException;
+
+	List<Customer> getCustomers(int branchId) throws CustomException;
 
 }

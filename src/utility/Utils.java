@@ -8,7 +8,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import CustomExceptions.InvalidValueException;
+import customexceptions.InvalidValueException;
 
 public class Utils {
 
@@ -53,13 +53,23 @@ public class Utils {
 
 					message.append(colorCode).append(record.getMessage()).append("\u001B[0m")
 							.append(System.lineSeparator()); // Reset color
-				
+
 					Throwable thrown = record.getThrown();
 					if (thrown != null) {
-						message.append(System.lineSeparator()).append("Exception Stack Trace: ");
+						message.append(System.lineSeparator()).append("Exception: ");
+						message.append(thrown.toString());
 						for (StackTraceElement element : thrown.getStackTrace()) {
 							message.append(System.lineSeparator()).append("\t").append(element.toString());
 						}
+						thrown = thrown.getCause();
+					}
+					while (thrown != null) {
+						message.append(System.lineSeparator()).append("Caused by: ");
+						message.append(thrown.toString());
+						for (StackTraceElement element : thrown.getStackTrace()) {
+							message.append(System.lineSeparator()).append("\t").append(element.toString());
+						}
+						thrown = thrown.getCause();
 					}
 
 					return message.toString();

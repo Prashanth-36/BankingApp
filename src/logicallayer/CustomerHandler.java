@@ -1,12 +1,12 @@
-package logicalLayer;
+package logicallayer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import CustomExceptions.CustomException;
+import customexceptions.CustomException;
 import model.Transaction;
-import persistentLayer.TransactionDao;
-import persistentLayer.TransactionManager;
+import persistentdao.TransactionDao;
+import persistentlayer.TransactionManager;
 import utility.TransactionType;
 
 public class CustomerHandler {

@@ -1,8 +1,8 @@
-package persistentLayer;
+package persistentlayer;
 
 import java.util.List;
 
-import CustomExceptions.CustomException;
+import customexceptions.CustomException;
 import model.Transaction;
 
 public interface TransactionManager {
