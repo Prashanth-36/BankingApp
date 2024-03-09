@@ -1,7 +1,5 @@
 package model;
 
-import java.time.LocalDate;
-
 import utility.ActiveStatus;
 import utility.UserType;
 
@@ -12,7 +10,7 @@ public class Customer extends User {
 	public Customer() {
 	}
 
-	public Customer(int userId, String name, LocalDate dob, String address, long number, ActiveStatus status,
+	public Customer(int userId, String name, long dob, String address, long number, ActiveStatus status,
 			String password, UserType type, String location, String city, String state, String email, long aadhaarNo,
 			String panNo) {
 		super(userId, name, dob, number, status, password, type, location, city, state, email);

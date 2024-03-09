@@ -1,23 +1,25 @@
 package model;
 
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import utility.TransactionType;
+import utility.Utils;
 
 public class Transaction {
-	private int id;
+	private String id;
 	private TransactionType type;
 	private double amount;
 	private int primaryAccount;
 	private int transactionalAccount;
-	private Timestamp timestamp;
+	private long timestamp;
 	private String description;
 
 	public Transaction() {
 	}
 
-	public Transaction(int id, TransactionType type, double amount, int primaryAccount, int transactionalAccount,
-			Timestamp timestamp, String description) {
+	public Transaction(String id, TransactionType type, double amount, int primaryAccount, int transactionalAccount,
+			long timestamp, String description) {
 		super();
 		this.id = id;
 		this.type = type;
@@ -28,11 +30,11 @@ public class Transaction {
 		this.description = description;
 	}
 
-	public int getId() {
+	public String getId() {
 		return id;
 	}
 
-	public void setId(int id) {
+	public void setId(String id) {
 		this.id = id;
 	}
 
@@ -68,11 +70,11 @@ public class Transaction {
 		this.transactionalAccount = transactionalAccount;
 	}
 
-	public Timestamp getTimestamp() {
+	public long getTimestamp() {
 		return timestamp;
 	}
 
-	public void setTimestamp(Timestamp timestamp) {
+	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
 
@@ -83,4 +85,13 @@ public class Transaction {
 	public void setDescription(String description) {
 		this.description = description;
 	}
+
+	@Override
+	public String toString() {
+		LocalDateTime time = Utils.millisToLocalDateTime(timestamp, ZoneId.systemDefault());
+		return "Transaction [id=" + id + ", type=" + type + ", amount=" + amount + ", primaryAccount=" + primaryAccount
+				+ ", transactionalAccount=" + transactionalAccount + ", timestamp=" + time + ", description="
+				+ description + "]";
+	}
+
 }

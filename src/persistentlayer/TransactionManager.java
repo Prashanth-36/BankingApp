@@ -11,7 +11,9 @@ public interface TransactionManager {
 
 	void initTransaction(List<Transaction> transactions) throws CustomException;
 
-	List<Transaction> getTransactions(int accountNo);
+	int getTransactionCount(int accountNo, long startTime) throws CustomException;
+
+	List<Transaction> getTransactions(int accountNo, long startTime, int offset, int limit) throws CustomException;
 
 	boolean isSameBankTransaction(int sourceAccountNo, int targetAccountNo) throws CustomException;
 

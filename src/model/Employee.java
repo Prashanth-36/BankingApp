@@ -1,7 +1,5 @@
 package model;
 
-import java.time.LocalDate;
-
 import utility.ActiveStatus;
 import utility.Privilege;
 import utility.UserType;
@@ -14,9 +12,8 @@ public class Employee extends User {
 	public Employee() {
 	}
 
-	public Employee(int userId, String name, LocalDate dob, long number, ActiveStatus status, String password,
-			UserType type, String location, String city, String state, int branchId, Privilege privilege,
-			String email) {
+	public Employee(int userId, String name, long dob, long number, ActiveStatus status, String password, UserType type,
+			String location, String city, String state, int branchId, Privilege privilege, String email) {
 
 		super(userId, name, dob, number, status, password, type, location, city, state, email);
 		this.branchId = branchId;

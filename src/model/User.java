@@ -2,16 +2,18 @@
 package model;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 import utility.ActiveStatus;
 import utility.Gender;
 import utility.UserType;
+import utility.Utils;
 
 public class User {
 
 	private int userId;
 	private String name;
-	private LocalDate dob;
+	private long dob;
 	private long number;
 	private ActiveStatus status;
 	private String password;
@@ -49,8 +51,8 @@ public class User {
 	public User() {
 	}
 
-	public User(int userId, String name, LocalDate dob, long number, ActiveStatus status, String password,
-			UserType type, String location, String city, String state, String email) {
+	public User(int userId, String name, long dob, long number, ActiveStatus status, String password, UserType type,
+			String location, String city, String state, String email) {
 		super();
 		this.userId = userId;
 		this.name = name;
@@ -81,11 +83,11 @@ public class User {
 		this.name = name;
 	}
 
-	public LocalDate getDob() {
+	public long getDob() {
 		return dob;
 	}
 
-	public void setDob(LocalDate dob) {
+	public void setDob(long dob) {
 		this.dob = dob;
 	}
 
@@ -131,7 +133,9 @@ public class User {
 
 	@Override
 	public String toString() {
-		return "User [userId=" + userId + ", name=" + name + ", dob=" + dob + ", number=" + number + ", status="
+		LocalDate date = Utils.millisToLocalDate(dob, ZoneId.systemDefault());
+
+		return "User [userId=" + userId + ", name=" + name + ", dob=" + date + ", number=" + number + ", status="
 				+ status + ", password=" + password + ", type=" + type + ", location=" + location + ", city=" + city
 				+ ", state=" + state + ", email=" + email + ", gender=" + gender + "]";
 	}

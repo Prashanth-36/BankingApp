@@ -1,16 +1,17 @@
 package inputlayer;
 
 import java.io.Console;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import logicallayer.SessionHandler;
 import model.Customer;
 import model.Employee;
 import model.User;
-import persistentdao.DBConnection;
 import utility.UserType;
 import utility.Utils;
 
@@ -23,31 +24,33 @@ public class Runner {
 		try (Scanner sc = InputScanner.getScanner()) {
 			boolean run = true;
 			while (run) {
-				logger.log(Level.INFO, "");
-				logger.log(Level.INFO, "1.Login");
-				logger.log(Level.INFO, "2.Exit");
-				logger.log(Level.INFO, "Enter your choice: ");
-				int ch = sc.nextInt();
-				sc.nextLine();
-				switch (ch) {
-				case 1: {
-					login();
-					break;
-				}
-				case 2: {
-					run = false;
-					logger.log(Level.INFO, "Thank You!");
-					try {
-						DBConnection.closeConnection();
-						InputScanner.closeScanner();
-					} catch (CustomException e) {
-						logger.log(Level.SEVERE, "DB Connection close failed", e);
+				try {
+					logger.log(Level.INFO, "");
+					logger.log(Level.INFO, "1.Login");
+					logger.log(Level.INFO, "2.Exit");
+					logger.log(Level.INFO, "Enter your choice: ");
+					int ch = sc.nextInt();
+					sc.nextLine();
+					switch (ch) {
+					case 1: {
+						login();
+						break;
 					}
-					break;
-				}
-				default:
-					logger.log(Level.INFO, "invalid input!");
-					break;
+					case 2: {
+						run = false;
+						logger.log(Level.INFO, "Thank You!");
+						InputScanner.closeScanner();
+						break;
+					}
+					default:
+						logger.log(Level.INFO, "invalid input!");
+						break;
+					}
+				} catch (InputMismatchException e) {
+					sc.nextLine();
+					logger.log(Level.SEVERE, "InputMismatchException", e);
+				} catch (Exception e) {
+					logger.log(Level.SEVERE, e.getMessage(), e);
 				}
 			}
 		}
@@ -69,13 +72,9 @@ public class Runner {
 		SessionHandler handler = new SessionHandler();
 		try {
 			User currentUser = handler.authenticate(id, password);
-			if (currentUser == null) {
-				logger.log(Level.SEVERE, "Invalid user id and password!");
-				return;
-			}
 			redirect(currentUser);
-		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Authentication failed!", e);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 

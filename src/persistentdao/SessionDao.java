@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import model.User;
 import persistentlayer.SessionManager;
 import utility.UserType;
@@ -13,10 +14,10 @@ import utility.UserType;
 public class SessionDao implements SessionManager {
 
 	@Override
-	public User authenticate(int userId, String password) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT type FROM user WHERE id = ? AND password = ?");) {
+	public User authenticate(int userId, String password) throws CustomException, InvalidValueException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement("SELECT type FROM user WHERE id = ? AND password = ?");) {
 			statement.setInt(1, userId);
 			statement.setString(2, password);
 			try (ResultSet result = statement.executeQuery()) {
@@ -52,7 +53,7 @@ public class SessionDao implements SessionManager {
 						break;
 					}
 				}
-				return null;
+				throw new InvalidValueException("Invalid user id and password!");
 			}
 		} catch (SQLException e) {
 			throw new CustomException("Authentication failed!", e);

@@ -4,28 +4,54 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import customexceptions.CustomException;
 import model.Transaction;
 import persistentlayer.TransactionManager;
+import utility.TransactionType;
 
 public class TransactionDao implements TransactionManager {
 
 	@Override
 	public void initTransaction(Transaction transaction) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement(
-				"INSERT INTO transaction(type,time,amount,primaryAccount,transactionalAccount,description) values(?,?,?,?,?,?)");) {
-			statement.setString(1, transaction.getType().name());
-			statement.setTimestamp(2, Timestamp.from(Instant.now()));
-			statement.setDouble(3, transaction.getAmount());
-			statement.setInt(4, transaction.getPrimaryAccount());
-			statement.setInt(5, transaction.getTransactionalAccount());
-			statement.setString(6, transaction.getDescription());
-			statement.executeUpdate();
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement transactionStatement = connection.prepareStatement(
+						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description) values(?,?,?,?,?,?,?)");
+				PreparedStatement accountStatement = connection.prepareStatement(
+						"UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?")) {
+			String id = (transaction.getId() != null) ? transaction.getId()
+					: String.format("%04d", transaction.getPrimaryAccount()) + System.currentTimeMillis()
+							+ String.format("%04d", transaction.getTransactionalAccount());
+			transactionStatement.setString(1, id);
+			transactionStatement.setString(2, transaction.getType().name());
+			transactionStatement.setDouble(4, transaction.getAmount());
+			transactionStatement.setInt(5, transaction.getPrimaryAccount());
+			transactionStatement.setInt(6, transaction.getTransactionalAccount());
+			transactionStatement.setString(7, transaction.getDescription());
+			transactionStatement.setLong(3, System.currentTimeMillis());
+
+			accountStatement.setInt(2, transaction.getPrimaryAccount());
+
+			if (transaction.getType() == TransactionType.DEBIT) {
+				accountStatement.setDouble(1, -transaction.getAmount());
+			} else {
+				accountStatement.setDouble(1, transaction.getAmount());
+			}
+
+			try {
+				connection.setAutoCommit(false);
+				accountStatement.executeUpdate();
+				transactionStatement.executeUpdate();
+				connection.commit();
+			} catch (SQLException e) {
+				connection.rollback();
+				throw new CustomException("Transaction failed!", e);
+			} finally {
+				connection.setAutoCommit(true);
+			}
+
 		} catch (SQLException e) {
 			throw new CustomException("Transaction failed!", e);
 		}
@@ -33,40 +59,43 @@ public class TransactionDao implements TransactionManager {
 
 	@Override
 	public void initTransaction(List<Transaction> transactions) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try {
-			connection.setAutoCommit(false);
-			for (Transaction transaction : transactions) {
-				initTransaction(transaction);
-			}
-			connection.commit();
-		} catch (SQLException e) {
+		try (Connection connection = DBConnection.getConnection();) {
 			try {
-				connection.rollback();
-			} catch (SQLException e1) {
-				throw new CustomException("Rollback failed!", e);
-			}
-			throw new CustomException("Transaction failed!", e);
-		} finally {
-			try {
-				connection.setAutoCommit(true);
+				connection.setAutoCommit(false);
+				long id = System.currentTimeMillis();
+				String transactionId = String.format("%04d", transactions.get(0).getPrimaryAccount()) + id
+						+ String.format("%04d", transactions.get(0).getTransactionalAccount());
+				for (Transaction transaction : transactions) {
+					transaction.setId(transactionId);
+					initTransaction(transaction);
+				}
+				connection.commit();
 			} catch (SQLException e) {
-				throw new CustomException("Toggle Auto Commit failed!", e);
+				try {
+					connection.rollback();
+				} catch (SQLException e1) {
+					throw new CustomException("Rollback failed!", e);
+				}
+				throw new CustomException("Transaction failed!", e);
+			} finally {
+				try {
+					connection.setAutoCommit(true);
+				} catch (SQLException e) {
+					throw new CustomException("Toggle Auto Commit failed!", e);
+				}
 			}
+		} catch (SQLException e) {
+			throw new CustomException("Transaction failed!", e);
 		}
 	}
 
 	@Override
-	public List<Transaction> getTransactions(int accountNo) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public boolean isSameBankTransaction(int sourceAccountNo, int targetAccountNo) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection
-				.prepareStatement("SELECT COUNT(*) as count FROM account WHERE accountNo IN (?,?)")) {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement("SELECT COUNT(*) as count FROM account WHERE accountNo IN (?,?)")) {
+			statement.setInt(1, sourceAccountNo);
+			statement.setInt(2, targetAccountNo);
 			ResultSet result = statement.executeQuery();
 			if (result.next()) {
 				if (result.getInt("count") == 2) {
@@ -77,6 +106,58 @@ public class TransactionDao implements TransactionManager {
 		} catch (SQLException e) {
 			throw new CustomException("Validation failed!", e);
 		}
+	}
+
+	@Override
+	public int getTransactionCount(int accountNo, long startTime) throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT Count(*) FROM transaction WHERE primaryAccount = ? and time > ? ORDER BY time DESC")) {
+			statement.setLong(1, accountNo);
+			statement.setLong(2, startTime);
+			try (ResultSet resultSet = statement.executeQuery()) {
+				if (resultSet.next()) {
+					return (resultSet.getInt(1));
+				}
+				return 0;
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Transaction fetch failed!", e);
+		}
+	}
+
+	@Override
+	public List<Transaction> getTransactions(int accountNo, long startTime, int offset, int limit)
+			throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT * FROM transaction WHERE primaryAccount = ? and time > ? ORDER BY time DESC LIMIT ?,?")) {
+			statement.setLong(1, accountNo);
+			statement.setLong(2, startTime);
+			statement.setInt(3, offset);
+			statement.setInt(4, limit);
+			List<Transaction> transactions = new ArrayList<Transaction>();
+			try (ResultSet resultSet = statement.executeQuery()) {
+				while (resultSet.next()) {
+					transactions.add(resultSetToTransaction(resultSet));
+				}
+				return transactions;
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Transaction fetch failed!", e);
+		}
+	}
+
+	private Transaction resultSetToTransaction(ResultSet resultSet) throws SQLException {
+		Transaction transaction = new Transaction();
+		transaction.setId(resultSet.getString("transactionId"));
+		transaction.setTimestamp(resultSet.getLong("time"));
+		transaction.setPrimaryAccount(resultSet.getInt("primaryAccount"));
+		transaction.setTransactionalAccount(resultSet.getInt("transactionalAccount"));
+		transaction.setAmount(resultSet.getDouble("amount"));
+		transaction.setType(TransactionType.valueOf(resultSet.getString("type")));
+		transaction.setDescription(resultSet.getString("description"));
+		return transaction;
 	}
 
 }

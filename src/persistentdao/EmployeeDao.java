@@ -1,7 +1,6 @@
 package persistentdao;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import model.Employee;
 import persistentlayer.EmployeeManager;
 import utility.ActiveStatus;
@@ -21,14 +21,14 @@ public class EmployeeDao implements EmployeeManager {
 
 	@Override
 	public void addEmployee(Employee employee) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement userStatement = connection.prepareStatement(
-				"INSERT INTO user(name, dob, number,password,status,type,location,city,state,email,gender) values(?,?,?,?,?,?,?,?,?,?)",
-				Statement.RETURN_GENERATED_KEYS);
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement userStatement = connection.prepareStatement(
+						"INSERT INTO user(name, dob, number,password,status,type,location,city,state,email,gender) values(?,?,?,?,?,?,?,?,?,?,?)",
+						Statement.RETURN_GENERATED_KEYS);
 				PreparedStatement statement = connection
 						.prepareStatement("INSERT INTO employee(id,branchId,privilege) VALUES (?,?,?)");) {
 			userStatement.setString(1, employee.getName());
-			userStatement.setDate(2, Date.valueOf(employee.getDob()));
+			userStatement.setLong(2, employee.getDob());
 			userStatement.setLong(3, employee.getNumber());
 			userStatement.setString(4, employee.getPassword());
 			userStatement.setString(5, ActiveStatus.ACTIVE.name());
@@ -66,18 +66,32 @@ public class EmployeeDao implements EmployeeManager {
 	}
 
 	@Override
-	public Employee getEmployee(int id) {
-		return null;
+	public Employee getEmployee(int id) throws CustomException, InvalidValueException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT u.*,privilege,branchId FROM user u JOIN employee e on u.id=e.id WHERE u.id = ?")) {
+			statement.setInt(1, id);
+			try (ResultSet resultSet = statement.executeQuery()) {
+				if (resultSet.next()) {
+					return resultSetToEmployee(resultSet);
+				}
+				throw new InvalidValueException("Invalid Employee id!");
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Employee fetch failed!", e);
+		}
 	}
 
 	@Override
-	public List<Employee> getEmployees(int branchId, int offset, int limit) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT u.*,e.branchId,e.privilege from user u join employee e on e.id=u.id where branchId = ? limit ?,?");) {
+	public List<Employee> getEmployees(int branchId, int offset, int limit, ActiveStatus status)
+			throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT u.*,e.branchId,e.privilege from user u join employee e on e.id=u.id where branchId = ? AND status = ? limit ?,?");) {
 			statement.setInt(1, branchId);
-			statement.setInt(2, offset);
-			statement.setInt(3, limit);
+			statement.setString(2, status.name());
+			statement.setInt(3, offset);
+			statement.setInt(4, limit);
 			try (ResultSet resultSet = statement.executeQuery();) {
 				List<Employee> employees = new ArrayList<Employee>();
 				while (resultSet.next()) {
@@ -92,8 +106,8 @@ public class EmployeeDao implements EmployeeManager {
 
 	@Override
 	public void removeEmployee(int id) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement("UPDATE user SET status = ? WHERE id = ?")) {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement("UPDATE user SET status = ? WHERE id = ?")) {
 			statement.setString(1, ActiveStatus.INACTIVE.name());
 			statement.setInt(2, id);
 			statement.executeUpdate();
@@ -105,7 +119,7 @@ public class EmployeeDao implements EmployeeManager {
 	public static Employee resultSetToEmployee(ResultSet employeeRecord) throws SQLException {
 		Employee employee = new Employee();
 		employee.setUserId(employeeRecord.getInt("id"));
-		employee.setDob(employeeRecord.getDate("dob").toLocalDate());
+		employee.setDob(employeeRecord.getLong("dob"));
 		employee.setLocation(employeeRecord.getString("location"));
 		employee.setCity(employeeRecord.getString("city"));
 		employee.setState(employeeRecord.getString("state"));
@@ -118,6 +132,24 @@ public class EmployeeDao implements EmployeeManager {
 		employee.setPrivilege(Privilege.valueOf(employeeRecord.getString("privilege")));
 		employee.setGender(Gender.valueOf(employeeRecord.getString("gender")));
 		return employee;
+	}
+
+	@Override
+	public int getEmployeesCount(int branchId, ActiveStatus status) throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT COUNT(*) from user u join employee e on e.id=u.id where branchId = ? AND status = ?");) {
+			statement.setInt(1, branchId);
+			statement.setString(2, status.name());
+			try (ResultSet resultSet = statement.executeQuery();) {
+				if (resultSet.next()) {
+					return resultSet.getInt(1);
+				}
+				return 0;
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Employee fetch failed!", e);
+		}
 	}
 
 }

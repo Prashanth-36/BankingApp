@@ -1,6 +1,7 @@
 package inputlayer;
 
 import java.time.LocalDate;
+import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -8,13 +9,16 @@ import java.util.logging.Logger;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidOperationException;
+import customexceptions.InvalidValueException;
 import logicallayer.EmployeeHandler;
+import model.Account;
 import model.Customer;
 import model.Employee;
 import utility.ActiveStatus;
 import utility.Gender;
 import utility.Privilege;
 import utility.UserType;
+import utility.Utils;
 import utility.Validate;
 
 public class EmployeeView {
@@ -26,22 +30,61 @@ public class EmployeeView {
 		this.profile = profile;
 	}
 
+	Scanner sc = InputScanner.getScanner();
 	EmployeeHandler employeeHandler = new EmployeeHandler();
 
 	public void handler() {
-		Scanner sc = InputScanner.getScanner();
-
 		logger.log(Level.INFO, "Welcome " + profile.getName());
 		boolean run = true;
 		while (run) {
-			logger.info("1.Manage Customer");
+			try {
+				logger.info("\n1.Manage Customer");
+				logger.info("2.Manage Accounts");
+				logger.info("Enter your choice:");
+				int choise = sc.nextInt();
+				sc.nextLine();
+				switch (choise) {
+				case 1:
+					manageCustomer();
+					break;
+				case 2:
+					manageAccounts();
+					break;
+				default:
+					run = false;
+					break;
+				}
+			} catch (InputMismatchException e) {
+				sc.nextLine();
+				logger.log(Level.SEVERE, "InputMismatchException", e);
+			} catch (Exception e) {
+				logger.log(Level.SEVERE, e.getMessage(), e);
+			}
+		}
+	}
+
+	protected void manageAccounts() {
+		boolean run = true;
+		while (run) {
+			logger.info("\n1.Add Account");
+			logger.info("2.Get Account details");
+			logger.info("3.Delete Account");
 			logger.info("Enter your choice:");
-			int choise = sc.nextInt();
+			int ch = sc.nextInt();
 			sc.nextLine();
-			switch (choise) {
+			switch (ch) {
 			case 1:
-				manageCustomer();
+				addAccount();
 				break;
+
+			case 2:
+				getAccount();
+				break;
+
+			case 3:
+				deleteAccount();
+				break;
+
 			default:
 				run = false;
 				break;
@@ -49,14 +92,47 @@ public class EmployeeView {
 		}
 	}
 
+	private void deleteAccount() {
+		logger.info("Enter account no:");
+		int accountNo = sc.nextInt();
+		sc.nextLine();
+		try {
+			employeeHandler.deleteAccount(accountNo);
+		} catch (CustomException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
+	private void getAccount() {
+		logger.info("Enter account number:");
+		int accountNo = sc.nextInt();
+		sc.nextLine();
+		Account account;
+		try {
+			account = employeeHandler.getAccount(accountNo);
+			logger.info(account.toString());
+		} catch (InvalidValueException | CustomException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
+	private void addAccount() {
+		Account account = getAccountDetails();
+		try {
+			employeeHandler.createAccount(account);
+		} catch (CustomException | InvalidValueException | InvalidOperationException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
 	public void manageCustomer() {
-		Scanner sc = InputScanner.getScanner();
 		boolean run = true;
 		while (run) {
-			logger.info("1.Add Customer");
+			logger.info("\n1.Add Customer");
 			logger.info("2.Get Customer");
 			logger.info("3.Get Branch Customers");
 			logger.info("4.Remove Customer");
+			logger.info("5.Get Customer ID");
 			logger.info("Enter your choice:");
 			int ch = sc.nextInt();
 			sc.nextLine();
@@ -68,18 +144,17 @@ public class EmployeeView {
 			case 2:
 				getCustomer();
 				break;
+
 			case 3:
-				if (profile.getPrivilege() == Privilege.ADMIN) {
-					logger.info("Enter branch id:");
-					int branchId = sc.nextInt();
-					sc.nextLine();
-					getCustomers(branchId);
-				} else {
-					getCustomers(profile.getBranchId());
-				}
+				getCustomers();
 				break;
+
 			case 4:
 				removeCustomer();
+				break;
+
+			case 5:
+				getCustomerId();
 				break;
 
 			default:
@@ -89,19 +164,67 @@ public class EmployeeView {
 		}
 	}
 
-	private void getCustomers(int branchId) {
+	private void getCustomerId() {
+		logger.info("Enter pan number:");
+		String pan = sc.nextLine();
 		try {
-			List<Customer> customers = employeeHandler.getCustomers(branchId);
-			customers.forEach(c -> logger.info(c.toString()));
-		} catch (CustomException e) {
-			logger.log(Level.INFO, "Customer fetch failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.INFO, "Exception!", e);
+			int id = employeeHandler.getCustomerId(pan);
+			logger.info(id + "");
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
+	private void getCustomers() {
+		int branchId;
+		if (profile.getPrivilege() == Privilege.ADMIN) {
+			logger.info("Enter branch id:");
+			branchId = sc.nextInt();
+			sc.nextLine();
+		} else {
+			branchId = profile.getBranchId();
+		}
+		try {
+			logger.info("Choose is (0)-Inactive / (1)-Active Customer:");
+			int isActive = sc.nextInt();
+			ActiveStatus statusArray[] = ActiveStatus.values();
+			Utils.checkRange(0, isActive, statusArray.length - 1,
+					"Invalid input required 0 for inactive and 1 for active");
+			ActiveStatus status = statusArray[isActive];
+			logger.info("Enter limit to display at a time (default 10):");
+			int limit;
+			String customLimit = sc.nextLine();
+			limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
+			sc.nextLine();
+			int totalPages = employeeHandler.getCustomerPageCount(branchId, limit, status);
+			if (totalPages == 0) {
+				logger.info("No Customers to Display.");
+			} else {
+				int pageNo = 1;
+				while (true) {
+					List<Customer> customers = employeeHandler.getCustomers(branchId, pageNo, limit, status);
+					customers.forEach(c -> logger.info(c.toString()));
+					if (totalPages == 1) {
+						break;
+					}
+					logger.info("Press Enter page number 1-" + pageNo + ": ");
+					String input = sc.nextLine();
+					try {
+						pageNo = Integer.parseInt(input);
+						if (pageNo < 1 || pageNo > totalPages) {
+							break;
+						}
+					} catch (NumberFormatException e) {
+						break;
+					}
+				}
+			}
+		} catch (InvalidValueException | CustomException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private void removeCustomer() {
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter customer id:");
 		int customerId = sc.nextInt();
 		sc.nextLine();
@@ -109,23 +232,18 @@ public class EmployeeView {
 			employeeHandler.removeCustomer(customerId);
 		} catch (CustomException e) {
 			logger.log(Level.INFO, "Customer Deletion failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.INFO, "Exception!", e);
 		}
 	}
 
 	public void getCustomer() {
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter customer id:");
 		int customerId = sc.nextInt();
 		sc.nextLine();
 		try {
 			Customer customer = employeeHandler.getCustomer(customerId);
 			logger.info(customer.toString());
-		} catch (CustomException e) {
-			logger.log(Level.INFO, "Customer fetch failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.INFO, "Exception!", e);
+		} catch (InvalidValueException | CustomException e) {
+			logger.log(Level.INFO, "Customer does not exist!", e);
 		}
 	}
 
@@ -133,24 +251,28 @@ public class EmployeeView {
 		Customer customer = getCustomerDetails();
 		try {
 			employeeHandler.addCustomer(customer);
-		} catch (InvalidOperationException | CustomException e) {
-			logger.log(Level.SEVERE, "Customer creation failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.INFO, "Exception!", e);
+		} catch (InvalidOperationException | CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private Customer getCustomerDetails() {
 		Customer customer = new Customer();
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter name: ");
 		String name = sc.nextLine();
 		customer.setName(name);
 		logger.info("Enter dob yyyy-mm-dd: ");
-		LocalDate dob = LocalDate.parse(sc.nextLine());
+		LocalDate date = LocalDate.parse(sc.nextLine());
+		long dob = Utils.getMillis(date);
 		customer.setDob(dob);
-		logger.info("Enter gender (MALE/FEMALE):");
-		customer.setGender(Gender.valueOf(sc.nextLine().toUpperCase()));
+		logger.info("Enter gender (0)-MALE / (1)-FEMALE:");
+		int genderInt = sc.nextInt();
+		try {
+			Utils.checkRange(0, genderInt, 1, "Enter 0 for male and 1 for female");
+		} catch (InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+		customer.setGender(Gender.values()[genderInt]);
 		logger.info("Enter email:");
 		String email = sc.nextLine();
 		while (!Validate.email(email)) {
@@ -178,10 +300,10 @@ public class EmployeeView {
 		String state = sc.nextLine();
 		customer.setState(state);
 		logger.info("Enter PAN Number");
-		String pan = sc.nextLine();
+		String pan = sc.nextLine().toUpperCase();
 		while (!Validate.pan(pan)) {
 			logger.warning("Enter valid pan number");
-			pan = sc.nextLine();
+			pan = sc.nextLine().toUpperCase();
 		}
 		customer.setPanNo(pan);
 		logger.info("Enter Aadhaar Number");
@@ -191,6 +313,21 @@ public class EmployeeView {
 		customer.setType(UserType.USER);
 		customer.setStatus(ActiveStatus.ACTIVE);
 		return customer;
+	}
+
+	private Account getAccountDetails() {
+		Account account = new Account();
+		logger.info("Enter customer id:");
+		int id = sc.nextInt();
+		account.setCustomerId(id);
+		if (profile.getPrivilege() == Privilege.ADMIN) {
+			logger.info("Enter branch id:");
+			int branchId = sc.nextInt();
+			account.setBranchId(branchId);
+		} else {
+			account.setBranchId(profile.getBranchId());
+		}
+		return account;
 	}
 
 	public Employee getProfile() {

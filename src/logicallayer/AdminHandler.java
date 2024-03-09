@@ -3,25 +3,42 @@ package logicallayer;
 import java.util.List;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import model.Branch;
 import model.Employee;
 import persistentdao.BranchDao;
 import persistentdao.EmployeeDao;
 import persistentlayer.BranchManager;
 import persistentlayer.EmployeeManager;
+import utility.ActiveStatus;
+import utility.Utils;
 
 public class AdminHandler extends EmployeeHandler {
 
-	EmployeeManager employeeManager = new EmployeeDao();
+	static EmployeeManager employeeManager = new EmployeeDao();
 
-	BranchManager branchManager = new BranchDao();
+	static BranchManager branchManager = new BranchDao();
 
-	public void addEmployee(Employee employee) throws CustomException {
+	public void addEmployee(Employee employee) throws CustomException, InvalidValueException {
+		Utils.checkNull(employee);
 		employeeManager.addEmployee(employee);
 	}
 
-	public List<Employee> getEmployees(int branchId, int limit, int offset) throws CustomException {
-		return employeeManager.getEmployees(branchId, limit, offset);
+	public List<Employee> getEmployees(int branchId, int pageNo, int limit, ActiveStatus status)
+			throws CustomException, InvalidValueException {
+		int offset = Utils.pagination(pageNo, limit);
+		return employeeManager.getEmployees(branchId, offset, limit, status);
+	}
+
+	public int getEmployeesPageCount(int branchId, int limit, ActiveStatus status)
+			throws CustomException, InvalidValueException {
+		if (!branchManager.isValidBranch(branchId)) {
+			throw new InvalidValueException("Invalid Branch id");
+		}
+		Utils.checkRange(5, limit, 50, "Limit should be within 5 to 50.");
+		int totalEmployees = employeeManager.getEmployeesCount(branchId, status);
+		int pages = (int) Math.ceil((double) totalEmployees / limit);
+		return pages;
 	}
 
 	public void removeEmployee(int id) throws CustomException {
@@ -32,12 +49,20 @@ public class AdminHandler extends EmployeeHandler {
 		branchManager.addBranch(branch);
 	}
 
-	public Branch getBranch(int branchId) throws CustomException {
+	public Branch getBranch(int branchId) throws CustomException, InvalidValueException {
 		return branchManager.getBranch(branchId);
+	}
+
+	public List<Branch> getBranches(ActiveStatus status) throws CustomException {
+		return branchManager.getBranches(status);
 	}
 
 	public void removeBranch(int branchId) throws CustomException {
 		branchManager.removeBranch(branchId);
+	}
+
+	public Employee getEmployee(int id) throws CustomException, InvalidValueException {
+		return employeeManager.getEmployee(id);
 	}
 
 }

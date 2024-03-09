@@ -1,15 +1,16 @@
 package model;
 
-import java.time.LocalDate;
+import utility.ActiveStatus;
 
 public class Account {
 	private int accountNo;
 	private int customerId;
 	private double currentBalance;
 	private boolean isPrimaryAccout;
-	private LocalDate openDate;
+	private long openDate;
 	private int branchId;
-	private String status;
+	private ActiveStatus status;
+	private String mpin;
 
 	public int getAccountNo() {
 		return accountNo;
@@ -43,11 +44,11 @@ public class Account {
 		this.isPrimaryAccout = isPrimaryAccout;
 	}
 
-	public LocalDate getOpenDate() {
+	public long getOpenDate() {
 		return openDate;
 	}
 
-	public void setOpenDate(LocalDate openDate) {
+	public void setOpenDate(long openDate) {
 		this.openDate = openDate;
 	}
 
@@ -59,11 +60,26 @@ public class Account {
 		this.branchId = branchId;
 	}
 
-	public String getStatus() {
+	public ActiveStatus getStatus() {
 		return status;
 	}
 
-	public void setStatus(String status) {
+	public void setStatus(ActiveStatus status) {
 		this.status = status;
+	}
+
+	public String getMpin() {
+		return mpin;
+	}
+
+	public void setMpin(String mpin) {
+		this.mpin = mpin;
+	}
+
+	@Override
+	public String toString() {
+		return "Account [accountNo=" + accountNo + ", customerId=" + customerId + ", currentBalance=" + currentBalance
+				+ ", isPrimaryAccout=" + isPrimaryAccout + ", openDate=" + openDate + ", branchId=" + branchId
+				+ ", status=" + status + ", mpin=" + mpin + "]";
 	}
 }

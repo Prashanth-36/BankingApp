@@ -1,5 +1,5 @@
 package utility;
 
 public enum Privilege {
-	EMPLOYEE, ADMIN;
+	ADMIN, EMPLOYEE;
 }

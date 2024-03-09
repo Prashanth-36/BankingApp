@@ -1,6 +1,10 @@
 package utility;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
@@ -12,10 +16,24 @@ import customexceptions.InvalidValueException;
 
 public class Utils {
 
+	public final static long MONTH_MILLIS = 1000l * 60 * 60 * 24 * 30;
+
 	public static void checkNull(Object obj) throws InvalidValueException {
 		if (obj == null) {
 			throw new InvalidValueException("Input cannot be null.");
 		}
+	}
+
+	public static LocalDate millisToLocalDate(long millis, ZoneId zoneId) {
+		return millisToLocalDateTime(millis, zoneId).toLocalDate();
+	}
+
+	public static LocalDateTime millisToLocalDateTime(long millis, ZoneId zoneId) {
+		return LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), zoneId);
+	}
+
+	public static long getMillis(LocalDate date) {
+		return date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
 	}
 
 	public static void checkRange(int min, int value, int max, String message) throws InvalidValueException {
@@ -82,6 +100,15 @@ public class Utils {
 		}
 		logger.setUseParentHandlers(false);
 		return logger;
+	}
+
+	public static int pagination(int pageNo, int limit) throws InvalidValueException {
+		if (pageNo < 1) {
+			throw new InvalidValueException("Page number should be positive int greater than 0");
+		}
+		Utils.checkRange(5, limit, 50, "Limit should be within 5 to 50.");
+		int offset = (pageNo - 1) * limit;
+		return offset;
 	}
 
 }

@@ -1,7 +1,6 @@
 package persistentdao;
 
 import java.sql.Connection;
-import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import model.Customer;
 import persistentlayer.CustomerManager;
 import utility.ActiveStatus;
@@ -20,15 +20,15 @@ public class CustomerDao implements CustomerManager {
 
 	@Override
 	public void addCustomer(Customer customer) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement userStatement = connection.prepareStatement(
-				"INSERT INTO user(name, dob, number,password,status,type,location,city,state,email,gender) values(?,?,?,?,?,?,?,?,?,?)",
-				Statement.RETURN_GENERATED_KEYS);
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement userStatement = connection.prepareStatement(
+						"INSERT INTO user(name, dob, number,password,status,type,location,city,state,email,gender) values(?,?,?,?,?,?,?,?,?,?,?)",
+						Statement.RETURN_GENERATED_KEYS);
 				PreparedStatement customerStatement = connection
 						.prepareStatement("INSERT INTO customer(id,aadhaarNo,panNo) VALUES(?,?,?)");) {
 
 			userStatement.setString(1, customer.getName());
-			userStatement.setDate(2, Date.valueOf(customer.getDob()));
+			userStatement.setLong(2, customer.getDob());
 			userStatement.setLong(3, customer.getNumber());
 			userStatement.setString(4, customer.getPassword());
 			userStatement.setString(5, ActiveStatus.ACTIVE.name());
@@ -68,9 +68,9 @@ public class CustomerDao implements CustomerManager {
 
 	@Override
 	public void removeCustomer(int customerId) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection
-				.prepareStatement("UPDATE user SET status = " + ActiveStatus.INACTIVE + " where customerId = ?");) {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement("UPDATE user SET status = " + ActiveStatus.INACTIVE + " where id = ?");) {
 			statement.setInt(1, customerId);
 			statement.executeUpdate();
 		} catch (SQLException e) {
@@ -79,16 +79,16 @@ public class CustomerDao implements CustomerManager {
 	}
 
 	@Override
-	public Customer getCustomer(int id) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT u.*,aadhaarNo,panNo FROM user u JOIN customer c on u.id=c.id WHERE u.id = ?")) {
+	public Customer getCustomer(int id) throws CustomException, InvalidValueException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT u.*,aadhaarNo,panNo FROM user u JOIN customer c on u.id=c.id WHERE u.id = ?")) {
 			statement.setInt(1, id);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				if (resultSet.next()) {
 					return resultSetToCustomer(resultSet);
 				}
-				return null;
+				throw new InvalidValueException("Invalid Customer id!");
 			}
 		} catch (SQLException e) {
 			throw new CustomException("Customer fetch failed!", e);
@@ -96,11 +96,15 @@ public class CustomerDao implements CustomerManager {
 	}
 
 	@Override
-	public List<Customer> getCustomers(int branchId) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement(
-				"SELECT u.*,panNo,aadhaarNo FROM user u JOIN customer c on u.id=c.id JOIN account a on a.customerId=u.id WHERE branchId = ?")) {
+	public List<Customer> getCustomers(int branchId, int offset, int limit, ActiveStatus status)
+			throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT u.*,panNo,aadhaarNo FROM user u JOIN customer c on u.id=c.id JOIN account a on a.customerId=u.id WHERE branchId = ? AND u.status = ? LIMIT ?,?")) {
 			statement.setInt(1, branchId);
+			statement.setString(2, status.name());
+			statement.setInt(3, offset);
+			statement.setInt(4, limit);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				List<Customer> customers = new ArrayList<Customer>();
 				while (resultSet.next()) {
@@ -115,8 +119,8 @@ public class CustomerDao implements CustomerManager {
 
 	@Override
 	public int getCustomerId(String panNo) throws CustomException {
-		Connection connection = DBConnection.getConnection();
-		try (PreparedStatement statement = connection.prepareStatement("SELECT id FROM customer where panNo = ?");) {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement("SELECT id FROM customer where panNo = ?");) {
 			statement.setString(1, panNo);
 			ResultSet resultSet = statement.executeQuery();
 			if (resultSet.next()) {
@@ -131,7 +135,7 @@ public class CustomerDao implements CustomerManager {
 	public static Customer resultSetToCustomer(ResultSet customerRecord) throws SQLException {
 		Customer customer = new Customer();
 		customer.setUserId(customerRecord.getInt("id"));
-		customer.setDob(customerRecord.getDate("dob").toLocalDate());
+		customer.setDob(customerRecord.getLong("dob"));
 		customer.setLocation(customerRecord.getString("location"));
 		customer.setCity(customerRecord.getString("city"));
 		customer.setState(customerRecord.getString("state"));
@@ -144,6 +148,42 @@ public class CustomerDao implements CustomerManager {
 		customer.setAadhaarNo(customerRecord.getLong("aadhaarNo"));
 		customer.setGender(Gender.valueOf(customerRecord.getString("gender")));
 		return customer;
+	}
+
+	@Override
+	public int getCustomersCount(int branchId, ActiveStatus status) throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection.prepareStatement(
+						"SELECT COUNT(*) FROM user u JOIN customer c on u.id=c.id JOIN account a on a.customerId=u.id WHERE branchId = ? AND u.status = ?")) {
+			statement.setInt(1, branchId);
+			statement.setString(2, status.name());
+			try (ResultSet resultSet = statement.executeQuery()) {
+				if (resultSet.next()) {
+					return resultSet.getInt(1);
+				}
+				return 0;
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Customer fetch failed!", e);
+		}
+	}
+
+	@Override
+	public List<Integer> getCustomerBranches(int customerId) throws CustomException {
+		try (Connection connection = DBConnection.getConnection();
+				PreparedStatement statement = connection
+						.prepareStatement("SELECT branchId FROM account WHERE customerId = ?")) {
+			statement.setInt(1, customerId);
+			try (ResultSet resultSet = statement.executeQuery()) {
+				List<Integer> branches = new ArrayList<>();
+				while (resultSet.next()) {
+					branches.add(resultSet.getInt(1));
+				}
+				return branches;
+			}
+		} catch (SQLException e) {
+			throw new CustomException("Customer fetch failed!", e);
+		}
 	}
 
 }

@@ -1,13 +1,14 @@
 package inputlayer;
 
 import java.time.LocalDate;
-import java.util.Arrays;
+import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidValueException;
 import logicallayer.AdminHandler;
 import model.Branch;
 import model.Employee;
@@ -15,6 +16,7 @@ import utility.ActiveStatus;
 import utility.Gender;
 import utility.Privilege;
 import utility.UserType;
+import utility.Utils;
 import utility.Validate;
 
 public class AdminView extends EmployeeView {
@@ -23,48 +25,59 @@ public class AdminView extends EmployeeView {
 
 	AdminHandler adminHandler = new AdminHandler();
 
+	Scanner sc = InputScanner.getScanner();
+
 	public AdminView(Employee employee) {
 		super(employee);
 	}
 
-	public void handler(Employee employee) {
-		Scanner sc = InputScanner.getScanner();
-
-		logger.log(Level.INFO, "Welcome " + employee.getName());
+	public void handler() {
+		logger.log(Level.INFO, "Welcome " + getProfile().getName());
 		boolean run = true;
 		while (run) {
-			logger.log(Level.INFO, "1.Manage Employee");
-			logger.log(Level.INFO, "2.Manage Customer");
-			logger.log(Level.INFO, "3.Manage Branch");
-			logger.log(Level.INFO, "Enter your choise:");
-			int choice = sc.nextInt();
-			sc.nextLine();
-			switch (choice) {
-			case 1:
-				manageEmployee();
-				break;
-			case 2:
-				manageCustomer();
-				break;
-			case 3:
-				manageBranch();
-				break;
+			try {
+				logger.log(Level.INFO, "\n1.Manage Employee");
+				logger.log(Level.INFO, "2.Manage Customer");
+				logger.log(Level.INFO, "3.Manage Branch");
+				logger.log(Level.INFO, "4.Manage Accounts");
+				logger.log(Level.INFO, "Enter your choise:");
+				int choice = sc.nextInt();
+				sc.nextLine();
+				switch (choice) {
+				case 1:
+					manageEmployee();
+					break;
+				case 2:
+					manageCustomer();
+					break;
+				case 3:
+					manageBranch();
+					break;
+				case 4:
+					manageAccounts();
+					break;
 
-			default:
-				run = false;
-				break;
+				default:
+					run = false;
+					break;
+				}
+			} catch (InputMismatchException e) {
+				sc.nextLine();
+				logger.log(Level.SEVERE, "InputMismatchException", e);
+			} catch (Exception e) {
+				logger.log(Level.SEVERE, e.getMessage(), e);
 			}
 		}
 
 	}
 
 	private void manageBranch() {
-		Scanner sc = InputScanner.getScanner();
 		boolean run = true;
 		while (run) {
-			logger.info("1.Add Branch");
-			logger.info("2.get Branches");
-			logger.info("3.remove Branch");
+			logger.info("\n1.Add Branch");
+			logger.info("2.get Branch");
+			logger.info("3.get Branches");
+			logger.info("4.remove Branch");
 			logger.info("Enter your choice:");
 			int choice = sc.nextInt();
 			sc.nextLine();
@@ -76,6 +89,9 @@ public class AdminView extends EmployeeView {
 				getBranch();
 				break;
 			case 3:
+				getBranches();
+				break;
+			case 4:
 				removeBranch();
 				break;
 			default:
@@ -85,37 +101,45 @@ public class AdminView extends EmployeeView {
 		}
 	}
 
+	private void getBranches() {
+		try {
+			logger.info("Choose is (0)-Inactive / (1)-Active branch:");
+			int isActive = sc.nextInt();
+			ActiveStatus statusArray[] = ActiveStatus.values();
+			Utils.checkRange(0, isActive, statusArray.length - 1,
+					"Invalid input required 0 for inactive and 1 for active");
+			ActiveStatus status = statusArray[isActive];
+			List<Branch> branches = adminHandler.getBranches(status);
+			branches.forEach(b -> logger.info(b.toString()));
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
 	private void removeBranch() {
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter branch id:");
 		int id = sc.nextInt();
 		sc.nextLine();
 		try {
 			adminHandler.removeBranch(id);
 		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Branch Deletion failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private void getBranch() {
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter branch id:");
 		int id = sc.nextInt();
 		sc.nextLine();
 		try {
 			Branch branch = adminHandler.getBranch(id);
 			logger.info(branch.toString());
-		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Branch fetch failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+		} catch (InvalidValueException | CustomException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private void addBranch() {
-		Scanner sc = InputScanner.getScanner();
 		Branch branch = new Branch();
 		logger.info("Enter branch location:");
 		String location = sc.nextLine();
@@ -126,25 +150,20 @@ public class AdminView extends EmployeeView {
 		logger.info("Enter branch State:");
 		String state = sc.nextLine();
 		branch.setState(state);
-		logger.info("Enter branch ifsc code:");
-		String ifsc = sc.nextLine();
-		branch.setIfsc(ifsc);
 		try {
 			adminHandler.addBranch(branch);
 		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Branch Creation Failed", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private void manageEmployee() {
-		Scanner sc = InputScanner.getScanner();
 		boolean manageEmployee = true;
 		while (manageEmployee) {
 			logger.log(Level.INFO, "\n1.Add Employee");
 			logger.log(Level.INFO, "2.Get Branch Employees");
-			logger.log(Level.INFO, "3.Remove Employee");
+			logger.log(Level.INFO, "3.Get Employee");
+			logger.log(Level.INFO, "4.Remove Employee");
 			int choise = sc.nextInt();
 			sc.nextLine();
 			switch (choise) {
@@ -155,8 +174,11 @@ public class AdminView extends EmployeeView {
 			case 2:
 				getEmployees();
 				break;
-
 			case 3:
+				getEmployee();
+				break;
+
+			case 4:
 				removeEmployee();
 				break;
 
@@ -167,44 +189,69 @@ public class AdminView extends EmployeeView {
 		}
 	}
 
+	private void getEmployee() {
+		Scanner scanner = InputScanner.getScanner();
+		logger.info("Enter employee id:");
+		int id = scanner.nextInt();
+		try {
+			Employee employee = adminHandler.getEmployee(id);
+			logger.info(employee.toString());
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
 	private void removeEmployee() {
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter employee id to remove:");
 		int id = sc.nextInt();
 		sc.nextLine();
 		try {
 			adminHandler.removeEmployee(id);
 		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Employee deletion failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private void getEmployees() {
-		Scanner sc = InputScanner.getScanner();
 		try {
 			logger.info("Enter branch id:");
 			int branchId = sc.nextInt();
+			logger.info("Choose is (0)-Inactive / (1)-Active employee:");
+			int isActive = sc.nextInt();
+			ActiveStatus statusArray[] = ActiveStatus.values();
+			Utils.checkRange(0, isActive, statusArray.length - 1,
+					"Invalid input required 0 for inactive and 1 for active");
+			ActiveStatus status = statusArray[isActive];
+			logger.info("Enter limit to display at a time (default 10):");
+			int limit;
+			String customLimit = sc.nextLine();
+			limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
 			sc.nextLine();
-			boolean display = true;
-			int page = 0;
-			int limit = 10;
-			while (display) {
-				List<Employee> employees = adminHandler.getEmployees(branchId, page * limit, limit);
-				employees.forEach(e -> logger.info(e.toString()));
-				logger.log(Level.INFO, "Enter n for next page.");
-				char next = sc.next().charAt(0);
-				if (next == 'n' || next == 'N') {
-					page++;
-				} else {
-					display = false;
+			int totalPages = adminHandler.getEmployeesPageCount(branchId, limit, status);
+			if (totalPages == 0) {
+				logger.info("No employees to display!");
+			} else {
+				int pageNo = 1;
+				while (true) {
+					List<Employee> employees = adminHandler.getEmployees(branchId, pageNo, limit, status);
+					employees.forEach(e -> logger.info(e.toString()));
+					if (totalPages == 1) {
+						break;
+					}
+					logger.log(Level.INFO, "Enter next page number 1-" + totalPages + ":");
+					String input = sc.nextLine();
+					try {
+						pageNo = Integer.parseInt(input);
+						if (pageNo < 1 || pageNo > totalPages) {
+							break;
+						}
+					} catch (NumberFormatException e) {
+						break;
+					}
 				}
 			}
-		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Employee fetch failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
@@ -213,24 +260,28 @@ public class AdminView extends EmployeeView {
 			Employee employeeDetails = getEmployeeDetails();
 			adminHandler.addEmployee(employeeDetails);
 			logger.log(Level.INFO, "Employee Created!");
-		} catch (CustomException e) {
-			logger.log(Level.SEVERE, "Employee creation failed!", e);
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, "Exception!", e);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
 	private Employee getEmployeeDetails() {
 		Employee employee = new Employee();
-		Scanner sc = InputScanner.getScanner();
 		logger.info("Enter name: ");
 		String name = sc.nextLine();
 		employee.setName(name);
 		logger.info("Enter dob yyyy-mm-dd: ");
-		LocalDate dob = LocalDate.parse(sc.nextLine());
+		LocalDate date = LocalDate.parse(sc.nextLine());
+		long dob = Utils.getMillis(date);
 		employee.setDob(dob);
-		logger.info("Enter gender (MALE/FEMALE):");
-		employee.setGender(Gender.valueOf(sc.nextLine().toUpperCase()));
+		logger.info("Enter gender (0)-MALE / (1)-FEMALE:");
+		int genderInt = sc.nextInt();
+		try {
+			Utils.checkRange(0, genderInt, 1, "Enter 0 for male and 1 for female");
+		} catch (InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+		employee.setGender(Gender.values()[genderInt]);
 		logger.info("Enter email:");
 		String email = sc.nextLine();
 		while (!Validate.email(email)) {
@@ -257,10 +308,15 @@ public class AdminView extends EmployeeView {
 		logger.info("Enter state:");
 		String state = sc.nextLine();
 		employee.setState(state);
-		logger.info("\nEnter privilege from below:");
-		Arrays.stream(Privilege.values()).forEach(e -> logger.info(e.name()));
-		Privilege privilege = Privilege.valueOf(sc.next().toUpperCase());
-		employee.setPrivilege(privilege);
+		logger.info("Enter privilege (0)-Admin / (1)-Employee:");
+		int privilegeInt = sc.nextInt();
+		Privilege privileges[] = Privilege.values();
+		try {
+			Utils.checkRange(0, privilegeInt, privileges.length - 1, "Enter 0 for admin and 1 for employee");
+		} catch (InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+		employee.setPrivilege(privileges[privilegeInt]);
 		logger.info("Enter branch id");
 		int branchId = sc.nextInt();
 		sc.nextLine();

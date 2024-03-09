@@ -1,11 +1,14 @@
 package model;
 
+import utility.ActiveStatus;
+
 public class Branch {
 	private int id;
 	private String ifsc;
 	private String location;
 	private String city;
 	private String state;
+	private ActiveStatus status;
 
 	public int getId() {
 		return id;
@@ -47,9 +50,18 @@ public class Branch {
 		this.state = state;
 	}
 
+	public ActiveStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(ActiveStatus status) {
+		this.status = status;
+	}
+
 	@Override
 	public String toString() {
 		return "Branch [id=" + id + ", ifsc=" + ifsc + ", location=" + location + ", city=" + city + ", state=" + state
-				+ "]";
+				+ ", status=" + status + "]";
 	}
+
 }
