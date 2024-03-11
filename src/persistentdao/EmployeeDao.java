@@ -5,8 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidValueException;
@@ -14,33 +14,33 @@ import model.Employee;
 import persistentlayer.EmployeeManager;
 import utility.ActiveStatus;
 import utility.Gender;
-import utility.Privilege;
 import utility.UserType;
+import utility.Utils;
 
 public class EmployeeDao implements EmployeeManager {
 
 	@Override
-	public void addEmployee(Employee employee) throws CustomException {
+	public void addEmployee(Employee employee) throws CustomException, InvalidValueException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement userStatement = connection.prepareStatement(
 						"INSERT INTO user(name, dob, number,password,status,type,location,city,state,email,gender) values(?,?,?,?,?,?,?,?,?,?,?)",
 						Statement.RETURN_GENERATED_KEYS);
 				PreparedStatement statement = connection
-						.prepareStatement("INSERT INTO employee(id,branchId,privilege) VALUES (?,?,?)");) {
+						.prepareStatement("INSERT INTO employee(id,branchId) VALUES (?,?)");) {
 			userStatement.setString(1, employee.getName());
 			userStatement.setLong(2, employee.getDob());
 			userStatement.setLong(3, employee.getNumber());
-			userStatement.setString(4, employee.getPassword());
-			userStatement.setString(5, ActiveStatus.ACTIVE.name());
-			userStatement.setString(6, employee.getType().name());
+			String hashedPassword = Utils.hashPassword(employee.getPassword());
+			userStatement.setString(4, hashedPassword);
+			userStatement.setInt(5, ActiveStatus.ACTIVE.ordinal());
+			userStatement.setInt(6, employee.getType().ordinal());
 			userStatement.setString(7, employee.getLocation());
 			userStatement.setString(8, employee.getCity().toLowerCase());
 			userStatement.setString(9, employee.getState().toLowerCase());
 			userStatement.setString(10, employee.getEmail());
-			userStatement.setString(11, employee.getGender().name());
+			userStatement.setInt(11, employee.getGender().ordinal());
 
 			statement.setInt(2, employee.getBranchId());
-			statement.setString(3, employee.getPrivilege().toString());
 
 			try {
 				connection.setAutoCommit(false);
@@ -69,7 +69,7 @@ public class EmployeeDao implements EmployeeManager {
 	public Employee getEmployee(int id) throws CustomException, InvalidValueException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(
-						"SELECT u.*,privilege,branchId FROM user u JOIN employee e on u.id=e.id WHERE u.id = ?")) {
+						"SELECT u.*,branchId FROM user u JOIN employee e on u.id=e.id WHERE u.id = ?")) {
 			statement.setInt(1, id);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				if (resultSet.next()) {
@@ -83,19 +83,20 @@ public class EmployeeDao implements EmployeeManager {
 	}
 
 	@Override
-	public List<Employee> getEmployees(int branchId, int offset, int limit, ActiveStatus status)
+	public Map<Integer, Employee> getEmployees(int branchId, int offset, int limit, ActiveStatus status)
 			throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement(
-						"SELECT u.*,e.branchId,e.privilege from user u join employee e on e.id=u.id where branchId = ? AND status = ? limit ?,?");) {
+						"SELECT u.*,e.branchId from user u join employee e on e.id=u.id where branchId = ? AND status = ? limit ?,?");) {
 			statement.setInt(1, branchId);
-			statement.setString(2, status.name());
+			statement.setInt(2, status.ordinal());
 			statement.setInt(3, offset);
 			statement.setInt(4, limit);
 			try (ResultSet resultSet = statement.executeQuery();) {
-				List<Employee> employees = new ArrayList<Employee>();
+				Map<Integer, Employee> employees = new HashMap<>();
 				while (resultSet.next()) {
-					employees.add(resultSetToEmployee(resultSet));
+					Employee employee = resultSetToEmployee(resultSet);
+					employees.put(employee.getUserId(), employee);
 				}
 				return employees;
 			}
@@ -105,15 +106,20 @@ public class EmployeeDao implements EmployeeManager {
 	}
 
 	@Override
-	public void removeEmployee(int id) throws CustomException {
+	public void setEmployeeStatus(int employeeId, ActiveStatus status) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement("UPDATE user SET status = ? WHERE id = ?")) {
-			statement.setString(1, ActiveStatus.INACTIVE.name());
-			statement.setInt(2, id);
+			statement.setInt(1, status.ordinal());
+			statement.setInt(2, employeeId);
 			statement.executeUpdate();
 		} catch (SQLException e) {
 			throw new CustomException("Employee deletion failed!", e);
 		}
+	}
+
+	@Override
+	public void removeEmployee(int id) throws CustomException {
+		setEmployeeStatus(id, ActiveStatus.INACTIVE);
 	}
 
 	public static Employee resultSetToEmployee(ResultSet employeeRecord) throws SQLException {
@@ -123,14 +129,13 @@ public class EmployeeDao implements EmployeeManager {
 		employee.setLocation(employeeRecord.getString("location"));
 		employee.setCity(employeeRecord.getString("city"));
 		employee.setState(employeeRecord.getString("state"));
-		employee.setStatus(ActiveStatus.valueOf(employeeRecord.getString("status")));
+		employee.setStatus(ActiveStatus.values()[employeeRecord.getInt("status")]);
 		employee.setName(employeeRecord.getString("name"));
 		employee.setNumber(employeeRecord.getLong("number"));
 		employee.setEmail(employeeRecord.getString("email"));
-		employee.setType(UserType.valueOf(employeeRecord.getString("type")));
+		employee.setType(UserType.values()[employeeRecord.getInt("type")]);
 		employee.setBranchId(employeeRecord.getInt("branchId"));
-		employee.setPrivilege(Privilege.valueOf(employeeRecord.getString("privilege")));
-		employee.setGender(Gender.valueOf(employeeRecord.getString("gender")));
+		employee.setGender(Gender.values()[employeeRecord.getInt("gender")]);
 		return employee;
 	}
 
@@ -140,7 +145,7 @@ public class EmployeeDao implements EmployeeManager {
 				PreparedStatement statement = connection.prepareStatement(
 						"SELECT COUNT(*) from user u join employee e on e.id=u.id where branchId = ? AND status = ?");) {
 			statement.setInt(1, branchId);
-			statement.setString(2, status.name());
+			statement.setInt(2, status.ordinal());
 			try (ResultSet resultSet = statement.executeQuery();) {
 				if (resultSet.next()) {
 					return resultSet.getInt(1);

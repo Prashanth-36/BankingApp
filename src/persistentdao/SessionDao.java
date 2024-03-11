@@ -10,6 +10,7 @@ import customexceptions.InvalidValueException;
 import model.User;
 import persistentlayer.SessionManager;
 import utility.UserType;
+import utility.Utils;
 
 public class SessionDao implements SessionManager {
 
@@ -19,12 +20,12 @@ public class SessionDao implements SessionManager {
 				PreparedStatement statement = connection
 						.prepareStatement("SELECT type FROM user WHERE id = ? AND password = ?");) {
 			statement.setInt(1, userId);
-			statement.setString(2, password);
+			String hashedPassword = Utils.hashPassword(password);
+			statement.setString(2, hashedPassword);
 			try (ResultSet result = statement.executeQuery()) {
 				if (result.next()) {
-					UserType type = UserType.valueOf(result.getString("type"));
-					switch (type) {
-					case USER:
+					UserType type = UserType.values()[result.getInt("type")];
+					if (type == UserType.USER) {
 						try (PreparedStatement userStatement = connection.prepareStatement(
 								"SELECT u.*,aadhaarNo,panNo FROM user u JOIN customer c ON u.id=c.id WHERE u.id = ?");) {
 							userStatement.setInt(1, userId);
@@ -35,11 +36,9 @@ public class SessionDao implements SessionManager {
 								}
 							}
 						}
-						break;
-
-					case EMPLOYEE:
+					} else {
 						try (PreparedStatement employeeStatement = connection.prepareStatement(
-								"SELECT u.*,branchId,privilege FROM user u JOIN employee e ON u.id=e.id WHERE u.id = ?");) {
+								"SELECT u.*,branchId FROM user u JOIN employee e ON u.id=e.id WHERE u.id = ?");) {
 							employeeStatement.setInt(1, userId);
 							try (ResultSet employeeRecord = employeeStatement.executeQuery()) {
 								if (employeeRecord.next()) {
@@ -48,9 +47,6 @@ public class SessionDao implements SessionManager {
 								}
 							}
 						}
-						break;
-					default:
-						break;
 					}
 				}
 				throw new InvalidValueException("Invalid user id and password!");

@@ -21,11 +21,12 @@ public class TransactionDao implements TransactionManager {
 						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description) values(?,?,?,?,?,?,?)");
 				PreparedStatement accountStatement = connection.prepareStatement(
 						"UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?")) {
-			String id = (transaction.getId() != null) ? transaction.getId()
-					: String.format("%04d", transaction.getPrimaryAccount()) + System.currentTimeMillis()
-							+ String.format("%04d", transaction.getTransactionalAccount());
+			String id = transaction.getId();
+			if (id == null) {
+				id = createdTransactionId(transaction.getPrimaryAccount(), transaction.getTransactionalAccount());
+			}
 			transactionStatement.setString(1, id);
-			transactionStatement.setString(2, transaction.getType().name());
+			transactionStatement.setInt(2, transaction.getType().ordinal());
 			transactionStatement.setDouble(4, transaction.getAmount());
 			transactionStatement.setInt(5, transaction.getPrimaryAccount());
 			transactionStatement.setInt(6, transaction.getTransactionalAccount());
@@ -62,9 +63,9 @@ public class TransactionDao implements TransactionManager {
 		try (Connection connection = DBConnection.getConnection();) {
 			try {
 				connection.setAutoCommit(false);
-				long id = System.currentTimeMillis();
-				String transactionId = String.format("%04d", transactions.get(0).getPrimaryAccount()) + id
-						+ String.format("%04d", transactions.get(0).getTransactionalAccount());
+				String transactionId = createdTransactionId(transactions.get(0).getPrimaryAccount(),
+						transactions.get(0).getTransactionalAccount());
+
 				for (Transaction transaction : transactions) {
 					transaction.setId(transactionId);
 					initTransaction(transaction);
@@ -155,9 +156,14 @@ public class TransactionDao implements TransactionManager {
 		transaction.setPrimaryAccount(resultSet.getInt("primaryAccount"));
 		transaction.setTransactionalAccount(resultSet.getInt("transactionalAccount"));
 		transaction.setAmount(resultSet.getDouble("amount"));
-		transaction.setType(TransactionType.valueOf(resultSet.getString("type")));
+		transaction.setType(TransactionType.values()[resultSet.getInt("type")]);
 		transaction.setDescription(resultSet.getString("description"));
 		return transaction;
+	}
+
+	String createdTransactionId(int primaryAccount, int transactionalAccount) {
+		return String.format("%04d", primaryAccount) + System.currentTimeMillis()
+				+ String.format("%04d", transactionalAccount);
 	}
 
 }

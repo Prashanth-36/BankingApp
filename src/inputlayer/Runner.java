@@ -12,7 +12,6 @@ import logicallayer.SessionHandler;
 import model.Customer;
 import model.Employee;
 import model.User;
-import utility.UserType;
 import utility.Utils;
 
 public class Runner {
@@ -25,8 +24,7 @@ public class Runner {
 			boolean run = true;
 			while (run) {
 				try {
-					logger.log(Level.INFO, "");
-					logger.log(Level.INFO, "1.Login");
+					logger.log(Level.INFO, "\n1.Login");
 					logger.log(Level.INFO, "2.Exit");
 					logger.log(Level.INFO, "Enter your choice: ");
 					int ch = sc.nextInt();
@@ -79,31 +77,25 @@ public class Runner {
 	}
 
 	private static void redirect(User currentUser) throws CustomException {
-		if (currentUser.getType() == UserType.USER && currentUser instanceof Customer) {
+		switch (currentUser.getType()) {
+		case USER: {
 			CustomerView view = new CustomerView((Customer) currentUser);
 			view.handler();
-		} else if (currentUser.getType() == UserType.EMPLOYEE && currentUser instanceof Employee) {
-			Employee employee = (Employee) currentUser;
-			switch (employee.getPrivilege()) {
-			case EMPLOYEE: {
-				EmployeeView view = new EmployeeView(employee);
-				view.handler();
-				break;
-			}
-			case ADMIN: {
-				AdminView view = new AdminView(employee);
-				view.handler();
-				break;
-			}
-			default:
-				throw new CustomException("Invalid employee privilege!");
-			}
-		} else {
-			throw new CustomException("Couldn't authorize user");
+			break;
+		}
+		case ADMIN: {
+			AdminView view = new AdminView((Employee) currentUser);
+			view.handler();
+			break;
+		}
+		case EMPLOYEE: {
+			EmployeeView view = new EmployeeView((Employee) currentUser);
+			view.handler();
+			break;
+		}
+		default:
+			throw new CustomException("Invalid employee privilege!");
 		}
 	}
 
-	public static void name() {
-
-	}
 }

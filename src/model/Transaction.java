@@ -15,21 +15,6 @@ public class Transaction {
 	private long timestamp;
 	private String description;
 
-	public Transaction() {
-	}
-
-	public Transaction(String id, TransactionType type, double amount, int primaryAccount, int transactionalAccount,
-			long timestamp, String description) {
-		super();
-		this.id = id;
-		this.type = type;
-		this.amount = amount;
-		this.primaryAccount = primaryAccount;
-		this.transactionalAccount = transactionalAccount;
-		this.timestamp = timestamp;
-		this.description = description;
-	}
-
 	public String getId() {
 		return id;
 	}

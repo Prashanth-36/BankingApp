@@ -2,7 +2,7 @@ package inputlayer;
 
 import java.time.LocalDate;
 import java.util.InputMismatchException;
-import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -14,7 +14,6 @@ import model.Branch;
 import model.Employee;
 import utility.ActiveStatus;
 import utility.Gender;
-import utility.Privilege;
 import utility.UserType;
 import utility.Utils;
 import utility.Validate;
@@ -109,8 +108,8 @@ public class AdminView extends EmployeeView {
 			Utils.checkRange(0, isActive, statusArray.length - 1,
 					"Invalid input required 0 for inactive and 1 for active");
 			ActiveStatus status = statusArray[isActive];
-			List<Branch> branches = adminHandler.getBranches(status);
-			branches.forEach(b -> logger.info(b.toString()));
+			Map<Integer, Branch> branches = adminHandler.getBranches(status);
+			branches.forEach((k, v) -> logger.info(v.toString()));
 		} catch (CustomException | InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
@@ -164,6 +163,7 @@ public class AdminView extends EmployeeView {
 			logger.log(Level.INFO, "2.Get Branch Employees");
 			logger.log(Level.INFO, "3.Get Employee");
 			logger.log(Level.INFO, "4.Remove Employee");
+			logger.log(Level.INFO, "5.Change Employee status");
 			int choise = sc.nextInt();
 			sc.nextLine();
 			switch (choise) {
@@ -182,10 +182,28 @@ public class AdminView extends EmployeeView {
 				removeEmployee();
 				break;
 
+			case 5:
+				setEmployeeStatus();
+				break;
+
 			default:
 				manageEmployee = false;
 				break;
 			}
+		}
+	}
+
+	private void setEmployeeStatus() {
+		logger.info("Enter employee id:");
+		int id = sc.nextInt();
+		logger.info("Choose status to change (0)-INACTIVE / (1)-ACTIVE:");
+		int statusInt = sc.nextInt();
+		sc.nextLine();
+		ActiveStatus status = ActiveStatus.values()[statusInt];
+		try {
+			adminHandler.setEmployeeStatus(id, status);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
@@ -233,8 +251,8 @@ public class AdminView extends EmployeeView {
 			} else {
 				int pageNo = 1;
 				while (true) {
-					List<Employee> employees = adminHandler.getEmployees(branchId, pageNo, limit, status);
-					employees.forEach(e -> logger.info(e.toString()));
+					Map<Integer, Employee> employees = adminHandler.getEmployees(branchId, pageNo, limit, status);
+					employees.forEach((k, v) -> logger.info(v.toString()));
 					if (totalPages == 1) {
 						break;
 					}
@@ -274,10 +292,10 @@ public class AdminView extends EmployeeView {
 		LocalDate date = LocalDate.parse(sc.nextLine());
 		long dob = Utils.getMillis(date);
 		employee.setDob(dob);
-		logger.info("Enter gender (0)-MALE / (1)-FEMALE:");
+		logger.info("Enter gender (0)-FEMALE / (1)-MALE:");
 		int genderInt = sc.nextInt();
 		try {
-			Utils.checkRange(0, genderInt, 1, "Enter 0 for male and 1 for female");
+			Utils.checkRange(0, genderInt, 1, "Enter 0 for female and 1 for male");
 		} catch (InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
@@ -308,20 +326,19 @@ public class AdminView extends EmployeeView {
 		logger.info("Enter state:");
 		String state = sc.nextLine();
 		employee.setState(state);
-		logger.info("Enter privilege (0)-Admin / (1)-Employee:");
-		int privilegeInt = sc.nextInt();
-		Privilege privileges[] = Privilege.values();
+		logger.info("Enter Type (1)-Admin / (2)-Employee:");
+		int typeInt = sc.nextInt();
+		UserType userType[] = UserType.values();
 		try {
-			Utils.checkRange(0, privilegeInt, privileges.length - 1, "Enter 0 for admin and 1 for employee");
+			Utils.checkRange(1, typeInt, 2, "Enter 1 for admin and 2 for employee");
 		} catch (InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
-		employee.setPrivilege(privileges[privilegeInt]);
+		employee.setType(userType[typeInt]);
 		logger.info("Enter branch id");
 		int branchId = sc.nextInt();
 		sc.nextLine();
 		employee.setBranchId(branchId);
-		employee.setType(UserType.EMPLOYEE);
 		employee.setStatus(ActiveStatus.ACTIVE);
 		return employee;
 	}

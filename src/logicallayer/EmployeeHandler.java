@@ -1,6 +1,7 @@
 package logicallayer;
 
 import java.util.List;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidOperationException;
@@ -27,7 +28,7 @@ public class EmployeeHandler {
 	public void addCustomer(Customer customer)
 			throws InvalidOperationException, CustomException, InvalidValueException {
 		Utils.checkNull(customer);
-		int customerId = customerManager.getCustomerId(customer.getPanNo());
+		int customerId = customerManager.getCustomerId(customer.getAadhaarNo());
 		if (customerId != -1) {
 			throw new InvalidOperationException("Customer already exists with id:" + customerId);
 		}
@@ -42,11 +43,11 @@ public class EmployeeHandler {
 		return customerManager.getCustomer(customerId);
 	}
 
-	public int getCustomerId(String panNo) throws CustomException, InvalidValueException {
-		return customerManager.getCustomerId(panNo);
+	public int getCustomerId(long aadhaarNo) throws CustomException, InvalidValueException {
+		return customerManager.getCustomerId(aadhaarNo);
 	}
 
-	public List<Customer> getCustomers(int branchId, int pageNo, int limit, ActiveStatus status)
+	public Map<Integer, Customer> getCustomers(int branchId, int pageNo, int limit, ActiveStatus status)
 			throws CustomException, InvalidValueException {
 		int offset = Utils.pagination(pageNo, limit);
 		return customerManager.getCustomers(branchId, offset, limit, status);
@@ -86,6 +87,15 @@ public class EmployeeHandler {
 
 	public Account getAccount(int accountNo) throws InvalidValueException, CustomException {
 		return accountManager.getAccount(accountNo);
+	}
+
+	public void setAccountStatus(int accountNo, ActiveStatus status) throws CustomException {
+		accountManager.setAccountStatus(accountNo, status);
+	}
+
+	public void setCustomerStatus(int customerId, ActiveStatus status) throws CustomException, InvalidValueException {
+		customerManager.getCustomer(customerId); // to validate existing customer
+		customerManager.setCustomerStatus(customerId, status);
 	}
 
 }

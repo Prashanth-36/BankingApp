@@ -2,6 +2,7 @@ package inputlayer;
 
 import java.util.InputMismatchException;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -134,8 +135,8 @@ public class CustomerView {
 
 	private void getAllAccounts() {
 		try {
-			List<Account> accounts = customerHandler.getAccounts(profile.getUserId());
-			accounts.forEach(a -> logger.info(a.toString()));
+			Map<Integer, Account> accounts = customerHandler.getAccounts(profile.getUserId());
+			accounts.forEach((k, v) -> logger.info(v.toString()));
 		} catch (CustomException | InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
@@ -240,8 +241,11 @@ public class CustomerView {
 	private void getCurrentBalance() {
 		logger.info("Enter account number:");
 		int accountNo = sc.nextInt();
+		sc.nextLine();
+		logger.info("Enter your mpin:");
+		String mpin = sc.nextLine();
 		try {
-			double balance = customerHandler.getCurrentBalance(accountNo);
+			double balance = customerHandler.getCurrentBalance(profile.getUserId(), mpin, accountNo);
 			logger.info("Current balance: " + balance);
 		} catch (CustomException | InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);

@@ -1,6 +1,6 @@
 package logicallayer;
 
-import java.util.List;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidValueException;
@@ -24,7 +24,7 @@ public class AdminHandler extends EmployeeHandler {
 		employeeManager.addEmployee(employee);
 	}
 
-	public List<Employee> getEmployees(int branchId, int pageNo, int limit, ActiveStatus status)
+	public Map<Integer, Employee> getEmployees(int branchId, int pageNo, int limit, ActiveStatus status)
 			throws CustomException, InvalidValueException {
 		int offset = Utils.pagination(pageNo, limit);
 		return employeeManager.getEmployees(branchId, offset, limit, status);
@@ -53,7 +53,7 @@ public class AdminHandler extends EmployeeHandler {
 		return branchManager.getBranch(branchId);
 	}
 
-	public List<Branch> getBranches(ActiveStatus status) throws CustomException {
+	public Map<Integer, Branch> getBranches(ActiveStatus status) throws CustomException {
 		return branchManager.getBranches(status);
 	}
 
@@ -63,6 +63,11 @@ public class AdminHandler extends EmployeeHandler {
 
 	public Employee getEmployee(int id) throws CustomException, InvalidValueException {
 		return employeeManager.getEmployee(id);
+	}
+
+	public void setEmployeeStatus(int employeeId, ActiveStatus status) throws CustomException, InvalidValueException {
+		employeeManager.getEmployee(employeeId); // validate existing employee
+		employeeManager.setEmployeeStatus(employeeId, status);
 	}
 
 }

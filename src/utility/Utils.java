@@ -1,6 +1,10 @@
 package utility;
 
 import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -111,4 +115,20 @@ public class Utils {
 		return offset;
 	}
 
+	public static String hashPassword(String password) throws InvalidValueException {
+		checkNull(password);
+		MessageDigest md;
+		try {
+			md = MessageDigest.getInstance("SHA-256");
+		} catch (NoSuchAlgorithmException e) {
+			throw new InvalidValueException("Invalid hashing algorithm", e);
+		}
+		byte[] hash = md.digest(password.getBytes(StandardCharsets.UTF_8));
+		BigInteger number = new BigInteger(1, hash);
+		StringBuilder hexString = new StringBuilder(number.toString(16));
+		while (hexString.length() < 32) {
+			hexString.insert(0, '0');
+		}
+		return hexString.toString();
+	}
 }

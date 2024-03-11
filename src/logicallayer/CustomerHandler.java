@@ -3,6 +3,7 @@ package logicallayer;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InsufficientFundException;
@@ -27,7 +28,9 @@ public class CustomerHandler {
 
 	static CustomerManager customerManager = new CustomerDao();
 
-	public double getCurrentBalance(int accountNo) throws CustomException, InvalidValueException {
+	public double getCurrentBalance(int customerId, String mpin, int accountNo)
+			throws CustomException, InvalidValueException {
+		checkValidRequest(customerId, mpin, accountNo);
 		return accountManager.getCurrentBalance(accountNo);
 	}
 
@@ -35,7 +38,7 @@ public class CustomerHandler {
 		return accountManager.getTotalBalance(customerId);
 	}
 
-	public List<Account> getAccounts(int customerId) throws CustomException, InvalidValueException {
+	public Map<Integer, Account> getAccounts(int customerId) throws CustomException, InvalidValueException {
 		customerManager.getCustomer(customerId); // verify valid id
 		return accountManager.getAccounts(customerId);
 	}
@@ -136,7 +139,7 @@ public class CustomerHandler {
 	private void checkSufficientBalance(int accountNo, double amount)
 			throws InvalidValueException, CustomException, InsufficientFundException {
 		checkNegativeAmount(amount);
-		double currentBalance = getCurrentBalance(accountNo);
+		double currentBalance = accountManager.getCurrentBalance(accountNo);
 		if (currentBalance - amount < 0) {
 			throw new InsufficientFundException("Amount Insufficient!");
 		}
@@ -147,9 +150,9 @@ public class CustomerHandler {
 		accountManager.checkValidRequest(customerId, mpin, accountNo);
 	}
 
-	public void changeMpin(int userId, int accountNo, String currentPin, String newPin)
+	public void changeMpin(int customerId, int accountNo, String currentPin, String newPin)
 			throws InvalidValueException, CustomException {
-		checkValidRequest(userId, currentPin, accountNo);
+		checkValidRequest(customerId, currentPin, accountNo);
 		accountManager.setMpin(accountNo, newPin);
 	}
 

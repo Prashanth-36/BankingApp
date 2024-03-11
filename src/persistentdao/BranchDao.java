@@ -5,8 +5,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidValueException;
@@ -27,7 +27,7 @@ public class BranchDao implements BranchManager {
 			statement.setString(1, branch.getLocation());
 			statement.setString(2, branch.getCity());
 			statement.setString(3, branch.getState());
-			statement.setString(4, ActiveStatus.ACTIVE.name());
+			statement.setInt(4, ActiveStatus.ACTIVE.ordinal());
 			try {
 				connection.setAutoCommit(false);
 				int rows = statement.executeUpdate();
@@ -72,14 +72,15 @@ public class BranchDao implements BranchManager {
 	}
 
 	@Override
-	public List<Branch> getBranches(ActiveStatus status) throws CustomException {
+	public Map<Integer, Branch> getBranches(ActiveStatus status) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection.prepareStatement("SELECT * FROM branch WHERE status = ?")) {
-			statement.setString(1, status.name());
+			statement.setInt(1, status.ordinal());
 			try (ResultSet resultSet = statement.executeQuery()) {
-				List<Branch> branches = new ArrayList<Branch>();
+				Map<Integer, Branch> branches = new HashMap<>();
 				while (resultSet.next()) {
-					branches.add(resultSetToBranch(resultSet));
+					Branch branch = resultSetToBranch(resultSet);
+					branches.put(branch.getId(), branch);
 				}
 				return branches;
 			}
@@ -92,8 +93,9 @@ public class BranchDao implements BranchManager {
 	public void removeBranch(int branchId) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection
-						.prepareStatement("UPDATE branch SET status = '" + ActiveStatus.INACTIVE + "' WHERE id = ?")) {
-			statement.setInt(1, branchId);
+						.prepareStatement("UPDATE branch SET status = ? WHERE id = ?")) {
+			statement.setInt(1, ActiveStatus.INACTIVE.ordinal());
+			statement.setInt(2, branchId);
 			statement.executeUpdate();
 		} catch (SQLException e) {
 			throw new CustomException("Branch Deletion failed!", e);
@@ -107,7 +109,7 @@ public class BranchDao implements BranchManager {
 		branch.setLocation(resultSet.getString("location"));
 		branch.setCity(resultSet.getString("city"));
 		branch.setState(resultSet.getString("state"));
-		branch.setStatus(ActiveStatus.valueOf(resultSet.getString("status")));
+		branch.setStatus(ActiveStatus.values()[resultSet.getInt("status")]);
 		return branch;
 	}
 

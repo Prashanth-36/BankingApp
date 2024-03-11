@@ -1,6 +1,6 @@
 package persistentlayer;
 
-import java.util.List;
+import java.util.Map;
 
 import customexceptions.CustomException;
 import customexceptions.InvalidValueException;
@@ -17,5 +17,5 @@ public interface BranchManager {
 
 	boolean isValidBranch(int branchId) throws InvalidValueException, CustomException;
 
-	List<Branch> getBranches(ActiveStatus status) throws CustomException;
+	Map<Integer, Branch> getBranches(ActiveStatus status) throws CustomException;
 }

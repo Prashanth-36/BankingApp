@@ -2,7 +2,7 @@ package inputlayer;
 
 import java.time.LocalDate;
 import java.util.InputMismatchException;
-import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -16,7 +16,6 @@ import model.Customer;
 import model.Employee;
 import utility.ActiveStatus;
 import utility.Gender;
-import utility.Privilege;
 import utility.UserType;
 import utility.Utils;
 import utility.Validate;
@@ -69,6 +68,7 @@ public class EmployeeView {
 			logger.info("\n1.Add Account");
 			logger.info("2.Get Account details");
 			logger.info("3.Delete Account");
+			logger.info("4.Modify Account status");
 			logger.info("Enter your choice:");
 			int ch = sc.nextInt();
 			sc.nextLine();
@@ -85,10 +85,29 @@ public class EmployeeView {
 				deleteAccount();
 				break;
 
+			case 4:
+				modifyAccountStatus();
+				break;
+
 			default:
 				run = false;
 				break;
 			}
+		}
+	}
+
+	private void modifyAccountStatus() {
+		logger.info("Enter account number:");
+		int accountNo = sc.nextInt();
+		logger.info("Choose status to set (0)-INACTIVE / (1)-ACTIVE");
+		int statusValue = sc.nextInt();
+		sc.nextLine();
+		try {
+			Utils.checkRange(0, statusValue, 1);
+			ActiveStatus status = ActiveStatus.values()[statusValue];
+			employeeHandler.setAccountStatus(accountNo, status);
+		} catch (InvalidValueException | CustomException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
@@ -133,6 +152,7 @@ public class EmployeeView {
 			logger.info("3.Get Branch Customers");
 			logger.info("4.Remove Customer");
 			logger.info("5.Get Customer ID");
+			logger.info("6.Change Customer status");
 			logger.info("Enter your choice:");
 			int ch = sc.nextInt();
 			sc.nextLine();
@@ -157,6 +177,10 @@ public class EmployeeView {
 				getCustomerId();
 				break;
 
+			case 6:
+				setCustomerStatus();
+				break;
+
 			default:
 				run = false;
 				break;
@@ -164,11 +188,26 @@ public class EmployeeView {
 		}
 	}
 
-	private void getCustomerId() {
-		logger.info("Enter pan number:");
-		String pan = sc.nextLine();
+	private void setCustomerStatus() {
+		logger.info("Enter customer id:");
+		int customerId = sc.nextInt();
+		logger.info("Enter customer status to update (0)-INACTIVE / (1)-ACTIVE");
+		int statusInt = sc.nextInt();
+		sc.nextLine();
+		ActiveStatus status = ActiveStatus.values()[statusInt];
 		try {
-			int id = employeeHandler.getCustomerId(pan);
+			employeeHandler.setCustomerStatus(customerId, status);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
+	private void getCustomerId() {
+		logger.info("Enter aadhaar number:");
+		long aadhaarNo = sc.nextLong();
+		sc.nextLine();
+		try {
+			int id = employeeHandler.getCustomerId(aadhaarNo);
 			logger.info(id + "");
 		} catch (CustomException | InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
@@ -177,7 +216,7 @@ public class EmployeeView {
 
 	private void getCustomers() {
 		int branchId;
-		if (profile.getPrivilege() == Privilege.ADMIN) {
+		if (profile.getType() == UserType.ADMIN) {
 			logger.info("Enter branch id:");
 			branchId = sc.nextInt();
 			sc.nextLine();
@@ -202,8 +241,8 @@ public class EmployeeView {
 			} else {
 				int pageNo = 1;
 				while (true) {
-					List<Customer> customers = employeeHandler.getCustomers(branchId, pageNo, limit, status);
-					customers.forEach(c -> logger.info(c.toString()));
+					Map<Integer, Customer> customers = employeeHandler.getCustomers(branchId, pageNo, limit, status);
+					customers.forEach((k, v) -> logger.info(v.toString()));
 					if (totalPages == 1) {
 						break;
 					}
@@ -265,10 +304,11 @@ public class EmployeeView {
 		LocalDate date = LocalDate.parse(sc.nextLine());
 		long dob = Utils.getMillis(date);
 		customer.setDob(dob);
-		logger.info("Enter gender (0)-MALE / (1)-FEMALE:");
+		logger.info("Enter gender (0)-FEMALE / (1)-MALE:");
 		int genderInt = sc.nextInt();
+		sc.nextLine();
 		try {
-			Utils.checkRange(0, genderInt, 1, "Enter 0 for male and 1 for female");
+			Utils.checkRange(0, genderInt, 1, "Enter 0 for female and 1 for male");
 		} catch (InvalidValueException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
@@ -320,13 +360,16 @@ public class EmployeeView {
 		logger.info("Enter customer id:");
 		int id = sc.nextInt();
 		account.setCustomerId(id);
-		if (profile.getPrivilege() == Privilege.ADMIN) {
+		if (profile.getType() == UserType.ADMIN) {
 			logger.info("Enter branch id:");
 			int branchId = sc.nextInt();
 			account.setBranchId(branchId);
 		} else {
 			account.setBranchId(profile.getBranchId());
 		}
+		logger.info("Enter MPIN if needed:");
+		String mpin = sc.nextLine();
+		account.setMpin(mpin);
 		return account;
 	}
 

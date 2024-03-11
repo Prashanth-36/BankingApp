@@ -48,25 +48,6 @@ public class User {
 		this.state = state;
 	}
 
-	public User() {
-	}
-
-	public User(int userId, String name, long dob, long number, ActiveStatus status, String password, UserType type,
-			String location, String city, String state, String email) {
-		super();
-		this.userId = userId;
-		this.name = name;
-		this.dob = dob;
-		this.number = number;
-		this.status = status;
-		this.password = password;
-		this.type = type;
-		this.location = location;
-		this.city = city;
-		this.state = state;
-		this.email = email;
-	}
-
 	public int getUserId() {
 		return userId;
 	}
@@ -131,6 +112,14 @@ public class User {
 		this.email = email;
 	}
 
+	public Gender getGender() {
+		return gender;
+	}
+
+	public void setGender(Gender gender) {
+		this.gender = gender;
+	}
+
 	@Override
 	public String toString() {
 		LocalDate date = Utils.millisToLocalDate(dob, ZoneId.systemDefault());
@@ -138,13 +127,5 @@ public class User {
 		return "User [userId=" + userId + ", name=" + name + ", dob=" + date + ", number=" + number + ", status="
 				+ status + ", password=" + password + ", type=" + type + ", location=" + location + ", city=" + city
 				+ ", state=" + state + ", email=" + email + ", gender=" + gender + "]";
-	}
-
-	public Gender getGender() {
-		return gender;
-	}
-
-	public void setGender(Gender gender) {
-		this.gender = gender;
 	}
 }
