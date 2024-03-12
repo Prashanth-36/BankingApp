@@ -18,7 +18,7 @@ public class TransactionDao implements TransactionManager {
 	public void initTransaction(Transaction transaction) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement transactionStatement = connection.prepareStatement(
-						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description) values(?,?,?,?,?,?,?)");
+						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description,customerId) values(?,?,?,?,?,?,?,?)");
 				PreparedStatement accountStatement = connection.prepareStatement(
 						"UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?")) {
 			String id = transaction.getId();
@@ -27,11 +27,12 @@ public class TransactionDao implements TransactionManager {
 			}
 			transactionStatement.setString(1, id);
 			transactionStatement.setInt(2, transaction.getType().ordinal());
+			transactionStatement.setLong(3, System.currentTimeMillis());
 			transactionStatement.setDouble(4, transaction.getAmount());
 			transactionStatement.setInt(5, transaction.getPrimaryAccount());
 			transactionStatement.setInt(6, transaction.getTransactionalAccount());
 			transactionStatement.setString(7, transaction.getDescription());
-			transactionStatement.setLong(3, System.currentTimeMillis());
+			transactionStatement.setInt(8, transaction.getCustomerId());
 
 			accountStatement.setInt(2, transaction.getPrimaryAccount());
 
@@ -158,6 +159,7 @@ public class TransactionDao implements TransactionManager {
 		transaction.setAmount(resultSet.getDouble("amount"));
 		transaction.setType(TransactionType.values()[resultSet.getInt("type")]);
 		transaction.setDescription(resultSet.getString("description"));
+		transaction.setCustomerId(resultSet.getInt("customerId"));
 		return transaction;
 	}
 

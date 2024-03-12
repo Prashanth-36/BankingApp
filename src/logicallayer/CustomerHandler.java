@@ -39,7 +39,6 @@ public class CustomerHandler {
 	}
 
 	public Map<Integer, Account> getAccounts(int customerId) throws CustomException, InvalidValueException {
-		customerManager.getCustomer(customerId); // verify valid id
 		return accountManager.getAccounts(customerId);
 	}
 
@@ -58,6 +57,7 @@ public class CustomerHandler {
 		transaction.setAmount(amount);
 		transaction.setType(TransactionType.CREDIT);
 		transaction.setDescription(description);
+		transaction.setCustomerId(customerId);
 		transactionManager.initTransaction(transaction);
 	}
 
@@ -70,6 +70,7 @@ public class CustomerHandler {
 		transaction.setAmount(amount);
 		transaction.setType(TransactionType.DEBIT);
 		transaction.setDescription(description);
+		transaction.setCustomerId(customerId);
 		transactionManager.initTransaction(transaction);
 	}
 
@@ -88,21 +89,26 @@ public class CustomerHandler {
 		primaryTransaction.setAmount(amount);
 		primaryTransaction.setType(TransactionType.DEBIT);
 		primaryTransaction.setDescription(description);
+		primaryTransaction.setCustomerId(customerId);
 
-		if (transactionManager.isSameBankTransaction(sourceAccountNo, targetAccountNo)) {
+		try {
+			Account transactionalAccount = accountManager.getAccount(targetAccountNo);
+
 			Transaction secondaryTransaction = new Transaction();
 			secondaryTransaction.setPrimaryAccount(targetAccountNo);
 			secondaryTransaction.setTransactionalAccount(sourceAccountNo);
 			secondaryTransaction.setAmount(amount);
 			secondaryTransaction.setType(TransactionType.CREDIT);
 			secondaryTransaction.setDescription(description);
+			secondaryTransaction.setCustomerId(transactionalAccount.getCustomerId());
 
 			List<Transaction> transactions = new ArrayList<Transaction>();
 			transactions.add(primaryTransaction);
 			transactions.add(secondaryTransaction);
 
 			transactionManager.initTransaction(transactions);
-		} else {
+
+		} catch (InvalidValueException e) { // other bank transaction
 			transactionManager.initTransaction(primaryTransaction);
 		}
 

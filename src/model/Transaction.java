@@ -14,6 +14,7 @@ public class Transaction {
 	private int transactionalAccount;
 	private long timestamp;
 	private String description;
+	private int customerId;
 
 	public String getId() {
 		return id;
@@ -71,12 +72,20 @@ public class Transaction {
 		this.description = description;
 	}
 
+	public int getCustomerId() {
+		return customerId;
+	}
+
+	public void setCustomerId(int customerId) {
+		this.customerId = customerId;
+	}
+
 	@Override
 	public String toString() {
 		LocalDateTime time = Utils.millisToLocalDateTime(timestamp, ZoneId.systemDefault());
 		return "Transaction [id=" + id + ", type=" + type + ", amount=" + amount + ", primaryAccount=" + primaryAccount
 				+ ", transactionalAccount=" + transactionalAccount + ", timestamp=" + time + ", description="
-				+ description + "]";
+				+ description + ", customerId=" + customerId + "]";
 	}
 
 }

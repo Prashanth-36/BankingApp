@@ -147,11 +147,11 @@ public class CustomerView {
 		int accountNo = sc.nextInt();
 		logger.info("Enter months min 1, max 6 months: ");
 		int months = sc.nextInt();
+		sc.nextLine();
 		logger.info("Enter limit to display at a time (default 10):");
 		int limit;
 		String customLimit = sc.nextLine();
 		limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
-		sc.nextLine();
 		logger.info("Enter your mpin:");
 		String mpin = sc.nextLine();
 		try {
@@ -168,7 +168,7 @@ public class CustomerView {
 					if (totalPages == 1) {
 						break;
 					}
-					logger.info("Press Enter page number 1-" + pageNo + ": ");
+					logger.info("Press Enter page number 1-" + totalPages + ": ");
 					String input = sc.nextLine();
 					try {
 						pageNo = Integer.parseInt(input);

@@ -3,6 +3,7 @@ package logicallayer;
 import java.util.Map;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidOperationException;
 import customexceptions.InvalidValueException;
 import model.Branch;
 import model.Employee;
@@ -41,7 +42,10 @@ public class AdminHandler extends EmployeeHandler {
 		return pages;
 	}
 
-	public void removeEmployee(int id) throws CustomException {
+	public void removeEmployee(int id) throws CustomException, InvalidOperationException {
+		if (id == 1) {
+			throw new InvalidOperationException("Can't remove admin!");
+		}
 		employeeManager.removeEmployee(id);
 	}
 

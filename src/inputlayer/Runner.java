@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidOperationException;
 import customexceptions.InvalidValueException;
 import logicallayer.SessionHandler;
 import model.Customer;
@@ -71,7 +72,7 @@ public class Runner {
 		try {
 			User currentUser = handler.authenticate(id, password);
 			redirect(currentUser);
-		} catch (CustomException | InvalidValueException e) {
+		} catch (CustomException | InvalidValueException | InvalidOperationException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}

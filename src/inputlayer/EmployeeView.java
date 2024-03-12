@@ -226,6 +226,7 @@ public class EmployeeView {
 		try {
 			logger.info("Choose is (0)-Inactive / (1)-Active Customer:");
 			int isActive = sc.nextInt();
+			sc.nextLine();
 			ActiveStatus statusArray[] = ActiveStatus.values();
 			Utils.checkRange(0, isActive, statusArray.length - 1,
 					"Invalid input required 0 for inactive and 1 for active");
@@ -234,7 +235,6 @@ public class EmployeeView {
 			int limit;
 			String customLimit = sc.nextLine();
 			limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
-			sc.nextLine();
 			int totalPages = employeeHandler.getCustomerPageCount(branchId, limit, status);
 			if (totalPages == 0) {
 				logger.info("No Customers to Display.");
@@ -246,7 +246,7 @@ public class EmployeeView {
 					if (totalPages == 1) {
 						break;
 					}
-					logger.info("Press Enter page number 1-" + pageNo + ": ");
+					logger.info("Press Enter page number 1-" + totalPages + ": ");
 					String input = sc.nextLine();
 					try {
 						pageNo = Integer.parseInt(input);

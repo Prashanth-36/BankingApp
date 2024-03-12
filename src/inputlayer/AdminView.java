@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidOperationException;
 import customexceptions.InvalidValueException;
 import logicallayer.AdminHandler;
 import model.Branch;
@@ -225,7 +226,7 @@ public class AdminView extends EmployeeView {
 		sc.nextLine();
 		try {
 			adminHandler.removeEmployee(id);
-		} catch (CustomException e) {
+		} catch (CustomException | InvalidOperationException e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
@@ -236,6 +237,7 @@ public class AdminView extends EmployeeView {
 			int branchId = sc.nextInt();
 			logger.info("Choose is (0)-Inactive / (1)-Active employee:");
 			int isActive = sc.nextInt();
+			sc.nextLine();
 			ActiveStatus statusArray[] = ActiveStatus.values();
 			Utils.checkRange(0, isActive, statusArray.length - 1,
 					"Invalid input required 0 for inactive and 1 for active");
@@ -244,7 +246,6 @@ public class AdminView extends EmployeeView {
 			int limit;
 			String customLimit = sc.nextLine();
 			limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
-			sc.nextLine();
 			int totalPages = adminHandler.getEmployeesPageCount(branchId, limit, status);
 			if (totalPages == 0) {
 				logger.info("No employees to display!");

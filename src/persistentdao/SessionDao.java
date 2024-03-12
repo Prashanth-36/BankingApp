@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import customexceptions.CustomException;
+import customexceptions.InvalidOperationException;
 import customexceptions.InvalidValueException;
 import model.User;
 import persistentlayer.SessionManager;
@@ -15,15 +16,19 @@ import utility.Utils;
 public class SessionDao implements SessionManager {
 
 	@Override
-	public User authenticate(int userId, String password) throws CustomException, InvalidValueException {
+	public User authenticate(int userId, String password)
+			throws CustomException, InvalidValueException, InvalidOperationException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement statement = connection
-						.prepareStatement("SELECT type FROM user WHERE id = ? AND password = ?");) {
+						.prepareStatement("SELECT type,status FROM user WHERE id = ? AND password = ?");) {
 			statement.setInt(1, userId);
 			String hashedPassword = Utils.hashPassword(password);
 			statement.setString(2, hashedPassword);
 			try (ResultSet result = statement.executeQuery()) {
 				if (result.next()) {
+					if (result.getInt("status") == 0) {
+						throw new InvalidOperationException("User is currently INACTIVE!");
+					}
 					UserType type = UserType.values()[result.getInt("type")];
 					if (type == UserType.USER) {
 						try (PreparedStatement userStatement = connection.prepareStatement(
