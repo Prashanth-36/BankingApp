@@ -39,7 +39,7 @@ public class CustomerHandler {
 	}
 
 	public Map<Integer, Account> getAccounts(int customerId) throws CustomException, InvalidValueException {
-		return accountManager.getAccounts(customerId);
+		return accountManager.getCachedUserAccounts(customerId);
 	}
 
 	public void setPrimaryAccount(int customerId, String mpin, int accountNo)
@@ -92,7 +92,7 @@ public class CustomerHandler {
 		primaryTransaction.setCustomerId(customerId);
 
 		try {
-			Account transactionalAccount = accountManager.getAccount(targetAccountNo);
+			Account transactionalAccount = accountManager.getCachedAccount(targetAccountNo);
 
 			Transaction secondaryTransaction = new Transaction();
 			secondaryTransaction.setPrimaryAccount(targetAccountNo);
