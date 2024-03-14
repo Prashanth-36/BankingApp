@@ -2,6 +2,7 @@ package model;
 
 public class Employee extends User {
 
+	private static final long serialVersionUID = 1L;
 	private int branchId;
 
 	public int getBranchId() {

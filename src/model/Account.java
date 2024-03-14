@@ -1,8 +1,11 @@
 package model;
 
+import java.io.Serializable;
+
 import utility.ActiveStatus;
 
-public class Account {
+public class Account implements Serializable {
+	private static final long serialVersionUID = 1L;
 	private int accountNo;
 	private int customerId;
 	private double currentBalance;

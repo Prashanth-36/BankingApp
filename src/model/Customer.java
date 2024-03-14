@@ -1,6 +1,7 @@
 package model;
 
 public class Customer extends User {
+	private static final long serialVersionUID = 1L;
 	private long aadhaarNo;
 	private String panNo;
 

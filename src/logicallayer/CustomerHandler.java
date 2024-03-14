@@ -30,9 +30,9 @@ public class CustomerHandler {
 
 	static CustomerManager customerManager = new CustomerDao();
 
-	Cache<Integer, Account> accountCache = new LRUCache<>(50);
+	Cache<Integer, Account> accountCache = new RedisCache<>();
 
-	Cache<Integer, List<Integer>> userAccountsCache = new LRUCache<>(10);
+	Cache<Integer, List<Integer>> userAccountsCache = new RedisCache<>(6380);
 
 	public double getCurrentBalance(int customerId, String mpin, int accountNo)
 			throws CustomException, InvalidValueException {
@@ -52,8 +52,10 @@ public class CustomerHandler {
 		List<Integer> accounts = userAccountsCache.get(customerId);
 		if (accounts == null) {
 			Map<Integer, Account> allAccounts = accountManager.getAccounts(customerId);
-			allAccounts.forEach(accountCache::put);
-			userAccountsCache.put(customerId, new ArrayList<>(allAccounts.keySet()));
+			for (Map.Entry<Integer, Account> e : allAccounts.entrySet()) {
+				accountCache.set(e.getKey(), e.getValue());
+			}
+			userAccountsCache.set(customerId, new ArrayList<>(allAccounts.keySet()));
 			return allAccounts;
 		}
 		Map<Integer, Account> allAccounts = new HashMap<>();

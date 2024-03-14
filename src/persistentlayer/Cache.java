@@ -1,13 +1,15 @@
 package persistentlayer;
 
+import customexceptions.CustomException;
+
 public interface Cache<K, V> {
-	void set(K key, V value);
+	void set(K key, V value) throws CustomException;
 
-	V get(K key);
+	V get(K key) throws CustomException;
 
-	default void put(K key, V value) {
+	default void put(K key, V value) throws CustomException {
 		set(key, value);
 	}
 
-	void remove(K key);
+	void remove(K key) throws CustomException;
 }
