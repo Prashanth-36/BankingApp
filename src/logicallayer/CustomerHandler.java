@@ -2,6 +2,7 @@ package logicallayer;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,6 +16,7 @@ import persistentdao.AccountDao;
 import persistentdao.CustomerDao;
 import persistentdao.TransactionDao;
 import persistentlayer.AccountManager;
+import persistentlayer.Cache;
 import persistentlayer.CustomerManager;
 import persistentlayer.TransactionManager;
 import utility.TransactionType;
@@ -28,9 +30,17 @@ public class CustomerHandler {
 
 	static CustomerManager customerManager = new CustomerDao();
 
+	Cache<Integer, Account> accountCache = new LRUCache<>(50);
+
+	Cache<Integer, List<Integer>> userAccountsCache = new LRUCache<>(10);
+
 	public double getCurrentBalance(int customerId, String mpin, int accountNo)
 			throws CustomException, InvalidValueException {
 		checkValidRequest(customerId, mpin, accountNo);
+		Account account = accountCache.get(accountNo);
+		if (account != null) {
+			return account.getCurrentBalance();
+		}
 		return accountManager.getCurrentBalance(accountNo);
 	}
 
@@ -39,7 +49,29 @@ public class CustomerHandler {
 	}
 
 	public Map<Integer, Account> getAccounts(int customerId) throws CustomException, InvalidValueException {
-		return accountManager.getCachedUserAccounts(customerId);
+		List<Integer> accounts = userAccountsCache.get(customerId);
+		if (accounts == null) {
+			Map<Integer, Account> allAccounts = accountManager.getAccounts(customerId);
+			allAccounts.forEach(accountCache::put);
+			userAccountsCache.put(customerId, new ArrayList<>(allAccounts.keySet()));
+			return allAccounts;
+		}
+		Map<Integer, Account> allAccounts = new HashMap<>();
+		for (int accountNo : accounts) {
+			Account account = getAccount(accountNo);
+			allAccounts.put(account.getAccountNo(), account);
+		}
+		return allAccounts;
+	}
+
+	public Account getAccount(int accountNo) throws CustomException, InvalidValueException {
+		Account account = accountCache.get(accountNo);
+		if (account != null) {
+			return account;
+		}
+		account = accountManager.getAccount(accountNo);
+		accountCache.set(accountNo, account);
+		return account;
 	}
 
 	public void setPrimaryAccount(int customerId, String mpin, int accountNo)
@@ -52,6 +84,7 @@ public class CustomerHandler {
 			throws CustomException, InvalidValueException {
 		checkValidRequest(customerId, mpin, accountNo);
 		checkNegativeAmount(amount);
+		accountCache.remove(accountNo);
 		Transaction transaction = new Transaction();
 		transaction.setPrimaryAccount(accountNo);
 		transaction.setAmount(amount);
@@ -65,6 +98,7 @@ public class CustomerHandler {
 			throws CustomException, InvalidValueException, InsufficientFundException {
 		checkValidRequest(customerId, mpin, accountNo);
 		checkSufficientBalance(accountNo, amount);
+		accountCache.remove(accountNo);
 		Transaction transaction = new Transaction();
 		transaction.setPrimaryAccount(accountNo);
 		transaction.setAmount(amount);
@@ -83,6 +117,8 @@ public class CustomerHandler {
 		}
 		checkValidRequest(customerId, mpin, sourceAccountNo);
 		checkSufficientBalance(sourceAccountNo, amount);
+		accountCache.remove(sourceAccountNo);
+		accountCache.remove(targetAccountNo);
 		Transaction primaryTransaction = new Transaction();
 		primaryTransaction.setPrimaryAccount(sourceAccountNo);
 		primaryTransaction.setTransactionalAccount(targetAccountNo);
@@ -92,7 +128,7 @@ public class CustomerHandler {
 		primaryTransaction.setCustomerId(customerId);
 
 		try {
-			Account transactionalAccount = accountManager.getCachedAccount(targetAccountNo);
+			Account transactionalAccount = getAccount(targetAccountNo);
 
 			Transaction secondaryTransaction = new Transaction();
 			secondaryTransaction.setPrimaryAccount(targetAccountNo);

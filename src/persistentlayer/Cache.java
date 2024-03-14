@@ -8,4 +8,6 @@ public interface Cache<K, V> {
 	default void put(K key, V value) {
 		set(key, value);
 	}
+
+	void remove(K key);
 }

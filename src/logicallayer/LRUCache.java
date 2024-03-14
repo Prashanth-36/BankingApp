@@ -34,8 +34,14 @@ public class LRUCache<K, V> implements Cache<K, V> {
 	}
 
 	public V get(K key) {
-		deque.remove(key);
-		deque.push(key);
+		if (deque.remove(key)) {
+			deque.push(key);
+		}
 		return map.get(key);
+	}
+
+	public void remove(K key) {
+		deque.remove(key);
+		map.remove(key);
 	}
 }
