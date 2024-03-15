@@ -1,5 +1,6 @@
 package logicallayer;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -8,13 +9,17 @@ import customexceptions.InvalidOperationException;
 import customexceptions.InvalidValueException;
 import model.Account;
 import model.Customer;
+import model.Transaction;
 import persistentdao.AccountDao;
 import persistentdao.BranchDao;
 import persistentdao.CustomerDao;
+import persistentdao.TransactionDao;
 import persistentlayer.AccountManager;
 import persistentlayer.BranchManager;
 import persistentlayer.CustomerManager;
+import persistentlayer.TransactionManager;
 import utility.ActiveStatus;
+import utility.TransactionType;
 import utility.Utils;
 
 public class EmployeeHandler {
@@ -24,6 +29,8 @@ public class EmployeeHandler {
 	static BranchManager branchManager = new BranchDao();
 
 	static AccountManager accountManager = new AccountDao();
+
+	static TransactionManager transactionManager = new TransactionDao();
 
 	public void addCustomer(Customer customer)
 			throws InvalidOperationException, CustomException, InvalidValueException {
@@ -86,7 +93,13 @@ public class EmployeeHandler {
 	}
 
 	public Account getAccount(int accountNo) throws InvalidValueException, CustomException {
-		return accountManager.getAccount(accountNo);
+		Account account = CustomerHandler.accountCache.get(accountNo);
+		if (account != null) {
+			return account;
+		}
+		account = accountManager.getAccount(accountNo);
+		CustomerHandler.accountCache.set(accountNo, account);
+		return account;
 	}
 
 	public void setAccountStatus(int accountNo, ActiveStatus status) throws CustomException {
@@ -98,4 +111,42 @@ public class EmployeeHandler {
 		customerManager.setCustomerStatus(customerId, status);
 	}
 
+	public int getTransactionPageCount(int accountNo, int months, int limit)
+			throws InvalidValueException, CustomException {
+		Utils.checkRange(1, months, 6, "Can only fetch 6 month transactions at a time");
+		Utils.checkRange(5, limit, 50, "Limit should be within 5 to 50.");
+		long startTime = Utils.getMillis(LocalDate.now()) - (months * Utils.MONTH_MILLIS);
+		int totalRecords = transactionManager.getTransactionCount(accountNo, startTime);
+		int totalPages = (int) Math.ceil((double) totalRecords / limit);
+		return totalPages;
+	}
+
+	public List<Transaction> getTransactions(int accountNo, int months, int pageNo, int limit)
+			throws CustomException, InvalidValueException {
+		if (months > 6) {
+			throw new InvalidValueException("Can only fetch 6 month transactions at a time");
+		}
+		if (!accountManager.isValidAccount(accountNo)) {
+			throw new InvalidValueException("Invalid Account number!");
+		}
+		long startTime = Utils.getMillis(LocalDate.now()) - (months * Utils.MONTH_MILLIS);
+		int offset = Utils.pagination(pageNo, limit);
+		return transactionManager.getTransactions(accountNo, startTime, offset, limit);
+	}
+
+	public void deposit(int accountNo, double amount, String description)
+			throws CustomException, InvalidValueException {
+		if (amount < 1) {
+			throw new InvalidValueException("Invalid amount!");
+		}
+		CustomerHandler.accountCache.remove(accountNo);
+		Transaction transaction = new Transaction();
+		transaction.setPrimaryAccount(accountNo);
+		transaction.setAmount(amount);
+		transaction.setType(TransactionType.CREDIT);
+		transaction.setDescription(description);
+		Account account = getAccount(accountNo);
+		transaction.setCustomerId(account.getCustomerId());
+		transactionManager.initTransaction(transaction);
+	}
 }

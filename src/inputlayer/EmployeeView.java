@@ -2,6 +2,7 @@ package inputlayer;
 
 import java.time.LocalDate;
 import java.util.InputMismatchException;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
@@ -14,6 +15,7 @@ import logicallayer.EmployeeHandler;
 import model.Account;
 import model.Customer;
 import model.Employee;
+import model.Transaction;
 import utility.ActiveStatus;
 import utility.Gender;
 import utility.UserType;
@@ -69,6 +71,8 @@ public class EmployeeView {
 			logger.info("2.Get Account details");
 			logger.info("3.Delete Account");
 			logger.info("4.Modify Account status");
+			logger.info("5.Deposit Amount");
+			logger.info("6.Get Transaction Statements");
 			logger.info("Enter your choice:");
 			int ch = sc.nextInt();
 			sc.nextLine();
@@ -89,10 +93,72 @@ public class EmployeeView {
 				modifyAccountStatus();
 				break;
 
+			case 5:
+				deposit();
+				break;
+
+			case 6:
+				getTransaction();
+				break;
+
 			default:
 				run = false;
 				break;
 			}
+		}
+	}
+
+	private void getTransaction() {
+		logger.info("Enter account no:");
+		int accountNo = sc.nextInt();
+		logger.info("Enter months min 1, max 6 months: ");
+		int months = sc.nextInt();
+		sc.nextLine();
+		logger.info("Enter limit to display at a time (default 10):");
+		int limit;
+		String customLimit = sc.nextLine();
+		limit = customLimit.isEmpty() ? 10 : Integer.parseInt(customLimit);
+		try {
+			int totalPages = employeeHandler.getTransactionPageCount(accountNo, months, limit);
+			if (totalPages == 0) {
+				logger.info("No Transaction to Display.");
+			} else {
+				int pageNo = 1;
+				while (true) {
+					List<Transaction> transactions = employeeHandler.getTransactions(accountNo, months, pageNo, limit);
+					transactions.forEach(t -> logger.info(t.toString()));
+					if (totalPages == 1) {
+						break;
+					}
+					logger.info("Press Enter page number 1-" + totalPages + ": ");
+					String input = sc.nextLine();
+					try {
+						pageNo = Integer.parseInt(input);
+						if (pageNo < 1 || pageNo > totalPages) {
+							break;
+						}
+					} catch (NumberFormatException e) {
+						break;
+					}
+				}
+			}
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+	}
+
+	private void deposit() {
+		logger.info("Enter account no:");
+		int accountNo = sc.nextInt();
+		logger.info("Enter amount to deposit:");
+		double amount = sc.nextDouble();
+		sc.nextLine();
+		logger.info("Description (State reason if any):");
+		String description = sc.nextLine();
+		try {
+			employeeHandler.deposit(accountNo, amount, description);
+		} catch (CustomException | InvalidValueException e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 

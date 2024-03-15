@@ -30,9 +30,9 @@ public class CustomerHandler {
 
 	static CustomerManager customerManager = new CustomerDao();
 
-	Cache<Integer, Account> accountCache = new RedisCache<>();
+	public static Cache<Integer, Account> accountCache = new RedisCache<>();
 
-	Cache<Integer, List<Integer>> userAccountsCache = new RedisCache<>(6380);
+	public static Cache<Integer, List<Integer>> userAccountsCache = new RedisCache<>(6380);
 
 	public double getCurrentBalance(int customerId, String mpin, int accountNo)
 			throws CustomException, InvalidValueException {

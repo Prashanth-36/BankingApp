@@ -18,9 +18,11 @@ public class TransactionDao implements TransactionManager {
 	public void initTransaction(Transaction transaction) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement transactionStatement = connection.prepareStatement(
-						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description,customerId) values(?,?,?,?,?,?,?,?)");
-				PreparedStatement accountStatement = connection.prepareStatement(
-						"UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?")) {
+						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description,customerId,balance) values(?,?,?,?,?,?,?,?,?)");
+				PreparedStatement accountStatement = connection
+						.prepareStatement("UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?");
+				PreparedStatement balanceStatement = connection
+						.prepareStatement("SELECT currentBalance FROM account WHERE accountNo = ?")) {
 			String id = transaction.getId();
 			if (id == null) {
 				id = createdTransactionId(transaction.getPrimaryAccount(), transaction.getTransactionalAccount());
@@ -34,6 +36,8 @@ public class TransactionDao implements TransactionManager {
 			transactionStatement.setString(7, transaction.getDescription());
 			transactionStatement.setInt(8, transaction.getCustomerId());
 
+			balanceStatement.setInt(1, transaction.getPrimaryAccount());
+
 			accountStatement.setInt(2, transaction.getPrimaryAccount());
 
 			if (transaction.getType() == TransactionType.DEBIT) {
@@ -45,8 +49,14 @@ public class TransactionDao implements TransactionManager {
 			try {
 				connection.setAutoCommit(false);
 				accountStatement.executeUpdate();
-				transactionStatement.executeUpdate();
-				connection.commit();
+				try (ResultSet resultSet = balanceStatement.executeQuery()) {
+					if (resultSet.next()) {
+						double balance = resultSet.getDouble(1);
+						transactionStatement.setDouble(9, balance);
+						transactionStatement.executeUpdate();
+						connection.commit();
+					}
+				}
 			} catch (SQLException e) {
 				connection.rollback();
 				throw new CustomException("Transaction failed!", e);
@@ -160,6 +170,7 @@ public class TransactionDao implements TransactionManager {
 		transaction.setType(TransactionType.values()[resultSet.getInt("type")]);
 		transaction.setDescription(resultSet.getString("description"));
 		transaction.setCustomerId(resultSet.getInt("customerId"));
+		transaction.setBalance(resultSet.getDouble("balance"));
 		return transaction;
 	}
 

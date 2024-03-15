@@ -15,6 +15,7 @@ public class Transaction {
 	private long timestamp;
 	private String description;
 	private int customerId;
+	private double balance;
 
 	public String getId() {
 		return id;
@@ -80,12 +81,20 @@ public class Transaction {
 		this.customerId = customerId;
 	}
 
+	public double getBalance() {
+		return balance;
+	}
+
+	public void setBalance(double balance) {
+		this.balance = balance;
+	}
+
 	@Override
 	public String toString() {
 		LocalDateTime time = Utils.millisToLocalDateTime(timestamp, ZoneId.systemDefault());
 		return "Transaction [id=" + id + ", type=" + type + ", amount=" + amount + ", primaryAccount=" + primaryAccount
 				+ ", transactionalAccount=" + transactionalAccount + ", timestamp=" + time + ", description="
-				+ description + ", customerId=" + customerId + "]";
+				+ description + ", customerId=" + customerId + ", balance=" + balance + "]";
 	}
 
 }
