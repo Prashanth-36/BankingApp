@@ -18,7 +18,7 @@ public class TransactionDao implements TransactionManager {
 	public void initTransaction(Transaction transaction) throws CustomException {
 		try (Connection connection = DBConnection.getConnection();
 				PreparedStatement transactionStatement = connection.prepareStatement(
-						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description,customerId,balance) values(?,?,?,?,?,?,?,?,?)");
+						"INSERT INTO transaction(transactionId,type,time,amount,primaryAccount,transactionalAccount,description,customerId,balance,ifsc) values(?,?,?,?,?,?,?,?,?,?)");
 				PreparedStatement accountStatement = connection
 						.prepareStatement("UPDATE account SET currentBalance = currentBalance + ? WHERE accountNo = ?");
 				PreparedStatement balanceStatement = connection
@@ -35,6 +35,7 @@ public class TransactionDao implements TransactionManager {
 			transactionStatement.setInt(6, transaction.getTransactionalAccount());
 			transactionStatement.setString(7, transaction.getDescription());
 			transactionStatement.setInt(8, transaction.getCustomerId());
+			transactionStatement.setString(9, transaction.getIfsc());
 
 			balanceStatement.setInt(1, transaction.getPrimaryAccount());
 
@@ -171,6 +172,7 @@ public class TransactionDao implements TransactionManager {
 		transaction.setDescription(resultSet.getString("description"));
 		transaction.setCustomerId(resultSet.getInt("customerId"));
 		transaction.setBalance(resultSet.getDouble("balance"));
+		transaction.setIfsc(resultSet.getString("ifsc"));
 		return transaction;
 	}
 

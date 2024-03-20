@@ -35,7 +35,7 @@ public class BranchDao implements BranchManager {
 					try (ResultSet resultSet = statement.getGeneratedKeys()) {
 						if (resultSet.next()) {
 							int id = resultSet.getInt(1);
-							String ifsc = "ZB" + String.format("%04d", id);
+							String ifsc = "VSB" + String.format("%04d", id);
 							branch.setIfsc(ifsc);
 							updateStatement.setString(1, ifsc);
 							updateStatement.setInt(2, id);

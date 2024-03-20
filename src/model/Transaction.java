@@ -16,6 +16,7 @@ public class Transaction {
 	private String description;
 	private int customerId;
 	private double balance;
+	private String ifsc;
 
 	public String getId() {
 		return id;
@@ -89,12 +90,20 @@ public class Transaction {
 		this.balance = balance;
 	}
 
+	public String getIfsc() {
+		return ifsc;
+	}
+
+	public void setIfsc(String ifsc) {
+		this.ifsc = ifsc;
+	}
+
 	@Override
 	public String toString() {
 		LocalDateTime time = Utils.millisToLocalDateTime(timestamp, ZoneId.systemDefault());
 		return "Transaction [id=" + id + ", type=" + type + ", amount=" + amount + ", primaryAccount=" + primaryAccount
 				+ ", transactionalAccount=" + transactionalAccount + ", timestamp=" + time + ", description="
-				+ description + ", customerId=" + customerId + ", balance=" + balance + "]";
+				+ description + ", customerId=" + customerId + ", balance=" + balance + ", ifsc=" + ifsc + "]";
 	}
 
 }
